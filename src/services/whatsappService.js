@@ -54,4 +54,4 @@ class WhatsAppService {
     }
   }
 }
-modules.exports = WhatsAppService;
+export default new WhatsAppService();
