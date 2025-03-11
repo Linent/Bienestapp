@@ -1,0 +1,268 @@
+openapi: 3.0.0
+info:
+  title: Panadería API
+  description: API para gestionar productos, clientes y pedidos en una panadería
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Optional server description, e.g. Main (local) server
+tags:
+  - name: Orders
+    description: Rutas de Order
+  - name: Users
+    description: Rutas de usuarios
+  - name: Products
+    description: Rutas de productos
+  - name: CategoriesProducts
+    description: Rutas de categorias de los productos
+  - name: Courtesy
+    description: Ruta para cortesias de productos
+paths:
+  /order:
+    post:
+      summary: Crear un pedido
+      tags:
+        - Orders
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+      responses:
+        '201':
+          description: Pedido creado con éxito
+        '400':
+          description: Error al crear el pedido
+
+  /order/today:
+    get:
+      summary: Obtener todas las órdenes del día (Administrador)
+      tags:
+        - Orders
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de órdenes del día
+        '403':
+          description: No autorizado. Solo administradores pueden acceder.
+        '500':
+          description: Error en el servidor
+  /product/create:
+    post:
+      summary: crear producto
+      tags:
+        - Products
+      parameters:
+        - in: formData
+          name: upfile
+          type: file
+          description: Archivo a subir.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        201:
+          description: producto creado con exito
+  /product/update/{id}:
+    post:
+      summary: actualizar producto
+      tags:
+        - Products
+      parameters:
+        - in: path
+          name: id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdate'
+      responses:
+        200:
+          description: producto actualizado con exito
+  /product/get:
+    get:
+      summary: obtener productos
+      tags:
+        - Products
+      responses:
+        200:
+          description: lista de todos los productos
+  /product/{id}:
+    put:
+      summary: editar status
+      tags:
+        - Products
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#components/schemas/ProductStatus'
+      responses:
+        "200":
+          description: modificación de status del producto
+  /courtesy/create:
+    post:
+      summary: crear una cortesia
+      tags:
+        - Courtesy
+      requestBody:
+        requiered: true
+        content:
+          application/json:
+            schema:
+              $ref: '#components/schemas/Courtesy'
+      responses:
+        "200":
+          description: la cortesia se realizo con exito
+  /user/create:
+    post:
+      summary: crear un usuario
+      tags:
+        - Users
+  /categoryProduct/create:
+    post:
+      summary: crear categoria del producto
+      tags:
+        - CategoriesProducts
+      requestBody:
+        requiered: true
+        content:
+          application/json:
+            schema:
+              $ref: '#components/schemas/CategoryProduct'
+      responses:
+        "200":
+          description: categoria de producto creada
+components:
+  schemas:
+    Order:
+      type: object
+      required:
+        - products
+        - totalAmount
+      properties:
+        id:
+          type: string
+          description: ID del pedido
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              product:
+                $ref: '#/components/schemas/Product'
+              quantity:
+                type: number
+                description: Cantidad del producto
+        totalAmount:
+          type: number
+          description: Monto total del pedido
+        client:
+          $ref: '#/components/schemas/Client'
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creación del pedido
+        status:
+          type: string
+          description: Estado del pedido
+          enum:
+            - pending
+            - completed
+            - cancelled
+      example:
+        products:
+          - product: 612c3bc72f5bf0013c2a08b1
+            quantity: 2
+        totalAmount: 15.5
+        client: null
+        status: pending
+    Product:
+      type: object
+      properties:
+        name: string
+        description: nombre del producto
+        netPrice: string
+        grossPrice: string
+        stock: number
+        categoryId: string
+        status: sting
+        discount: number
+        image: 
+          contentType: image/png, image/jpeg
+      example:
+        name: pan de mil
+        netPrice: 750
+        grossPrice: 1000
+        stock: 40
+        unitType: unit
+        description: delicioso pan de mil
+        categoryId: 66e60252ffe22d9ecdd15822
+        discount: 0
+        status: active
+    ProductUpdate:
+      type: object
+      properties:
+        name: string
+        description: nombre del producto
+        netPrice: string
+        grossPrice: string
+        stock: number
+        categoryId: string
+        discount: number
+        status: sting
+      example:
+        name: pan de mil
+        netPrice: 
+        grossPrice:
+        stock: 40
+        description: delicioso pan de mil
+        categoryId: 66e60252ffe22d9ecdd15822
+        discount: 0
+        status: active
+    Client:
+      type: object
+      properties:
+        name: string
+        description: nombre del cliente
+    ProductStatus:
+      type: object
+      properties:
+        status: string
+      example:
+        status: active
+    CategoryProduct:
+      type: object
+      properties:
+        name: string
+        description: string
+      example:
+        name: panaderia
+        description: todos los productos referentes a panaderia
+    Courtesy:
+      type: object
+      properties:
+        productId: string
+        quantity: number
+      example:
+        productId: 66e73361ca4b207e2bb18c00
+        quantity: 4
+      
+
+
+
