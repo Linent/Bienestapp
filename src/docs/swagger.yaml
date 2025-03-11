@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
-  title: Panadería API
-  description: API para gestionar productos, clientes y pedidos en una panadería
+  title: binestapp API
+  description: API para gestionar el chatbot via whatsapp y plataforma de gestion de bienestar
   version: 1.0.0
 servers:
   - url: http://localhost:8080
