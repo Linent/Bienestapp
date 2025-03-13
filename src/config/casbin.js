@@ -12,7 +12,7 @@ class CasbinConfig extends EventEmitter{
         MongooseAdapter.newSyncedAdapter(config.MONGODB_URI)
         .then(adapter => {
             // ubicacion del modelo.conf
-            const model = path.resolve(__dirname, '../../binestapp.conf');
+            const model = path.resolve(__dirname, '../../bienestapp.conf');
             //cargar model and policy 
             //Crea una nueva instancia del adaptador mongoose para casbin. 
             return newEnforcer(model, adapter);

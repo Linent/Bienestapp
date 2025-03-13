@@ -1,16 +1,16 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const AdvisorySchema = new mongoose.Schema({
-    students: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }], // Lista de estudiantes
-    academicFriendId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    subject: { type: String, required: true }, // Materia de la asesoría
-    date: { type: Date, required: true },
-    startTime: { type: String, required: true },
-    endTime: { type: String, required: true },
-    status: { type: String, enum: ["scheduled", "completed", "cancelled"], default: "scheduled" },
-    
-},
-  { timestamps: true } // Habilita createdAt y updatedAt automáticamente
+const advisorySchema = new mongoose.Schema(
+  {
+    student: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Estudiante que solicita la asesoría
+    advisor: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Asesor académico asignado
+    subject: { type: mongoose.Schema.Types.ObjectId, ref: "Subject", required: true }, // Materia de la asesoría
+    topic: { type: String, required: true }, // Tema específico de la asesoría
+    date: { type: Date, required: true }, // Fecha y hora de la asesoría
+    status: { type: String, enum: ["pending", "approved", "completed", "canceled"], default: "pending" }, // Estado de la asesoría
+    attendance: { type: Boolean, default: false }, // Si el estudiante asistió o no
+  },
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("Advisory", AdvisorySchema);
+export default mongoose.model("Advisory", advisorySchema);
