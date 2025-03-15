@@ -1,28 +1,99 @@
 openapi: 3.0.0
 info:
-  title: binestapp API
-  description: API para gestionar el chatbot via whatsapp y plataforma de gestion de bienestar
+  title: Asesorías API
+  description: API para gestionar el sistema de asesorías universitarias
   version: 1.0.0
+
 servers:
   - url: http://localhost:8080
-    description: Optional server description, e.g. Main (local) server
+    description: Servidor local
+
 tags:
-  - name: Orders
-    description: Rutas de Order
+  - name: Careers
+    description: Rutas de carreras
   - name: Users
     description: Rutas de usuarios
-  - name: Products
-    description: Rutas de productos
-  - name: CategoriesProducts
-    description: Rutas de categorias de los productos
-  - name: Courtesy
-    description: Ruta para cortesias de productos
+  - name: Advisory
+    description: Rutas de asesorías
+
 paths:
-  /order:
+  /career/create:
     post:
-      summary: Crear un pedido
+      summary: Crear una nueva carrera
       tags:
-        - Orders
+        - Careers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Career'
+      responses:
+        "201":
+          description: Carrera creada con éxito
+        "400":
+          description: Datos inválidos
+        "500":
+          description: Error interno del servidor
+  /career/:
+    get:
+      summary: Obtener todas las carreras
+      tags:
+        - Careers
+      responses:
+        "201":
+          description: Carreras obtenidas
+  /user/register:
+    post:
+      summary: Crear un nuevo usuario
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        "201":
+          description: Usuario registrado con éxito
+        "400":
+          description: Datos inválidos
+        "500":
+          description: Error interno del servidor
+  /user/login:
+    post:
+      summary: Iniciar sesión
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+      responses:
+        "200":
+          description: Inicio de sesión exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsIn..."
+                  user:
+                    $ref: '#/components/schemas/User'
+        "400":
+          description: Credenciales inválidas
+        "500":
+          description: Error interno del servidor
+  /advisory/create:
+    post:
+      summary: Crear una asesoría
+      tags:
+        - Advisory
       security:
         - bearerAuth: []
       requestBody:
@@ -30,239 +101,304 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Order'
+              $ref: '#/components/schemas/Advisory'
       responses:
         '201':
-          description: Pedido creado con éxito
+          description: Asesoría creada con éxito
         '400':
-          description: Error al crear el pedido
-
-  /order/today:
+          description: Datos inválidos
+        '403':
+          description: No autorizado
+        '500':
+          description: Error en el servidor
+  /advisory/:
     get:
-      summary: Obtener todas las órdenes del día (Administrador)
+      summary: Obtener todas las asesorías
       tags:
-        - Orders
+        - Advisory
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Lista de órdenes del día
+          description: Lista de asesorías obtenida con éxito
         '403':
-          description: No autorizado. Solo administradores pueden acceder.
+          description: No autorizado
         '500':
           description: Error en el servidor
-  /product/create:
-    post:
-      summary: crear producto
-      tags:
-        - Products
-      parameters:
-        - in: formData
-          name: upfile
-          type: file
-          description: Archivo a subir.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Product'
-      responses:
-        201:
-          description: producto creado con exito
-  /product/update/{id}:
-    post:
-      summary: actualizar producto
-      tags:
-        - Products
-      parameters:
-        - in: path
-          name: id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProductUpdate'
-      responses:
-        200:
-          description: producto actualizado con exito
-  /product/get:
+
+  /advisory/{id}:
     get:
-      summary: obtener productos
+      summary: Obtener asesoría por ID
       tags:
-        - Products
-      responses:
-        200:
-          description: lista de todos los productos
-  /product/{id}:
-    put:
-      summary: editar status
-      tags:
-        - Products
+        - Advisory
       parameters:
         - in: path
           name: id
           schema:
             type: string
           required: true
+          description: ID de la asesoría
+      responses:
+        '200':
+          description: Asesoría obtenida con éxito
+        '404':
+          description: Asesoría no encontrada
+        '500':
+          description: Error en el servidor
+
+    put:
+      summary: Actualizar una asesoría
+      tags:
+        - Advisory
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID de la asesoría a actualizar
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#components/schemas/ProductStatus'
+              $ref: '#/components/schemas/AdvisoryUpdate'
+      responses:
+        '200':
+          description: Asesoría actualizada con éxito
+        '404':
+          description: Asesoría no encontrada
+        '500':
+          description: Error en el servidor
+
+    delete:
+      summary: Eliminar una asesoría
+      tags:
+        - Advisory
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: ID de la asesoría a eliminar
+      responses:
+        '200':
+          description: Asesoría eliminada con éxito
+        '404':
+          description: Asesoría no encontrada
+        '500':
+          description: Error en el servidor
+  /subjects:
+    get:
+      summary: Obtener todas las materias
+      description: Retorna una lista de todas las materias disponibles en el sistema.
+      tags:
+        - Subjects
       responses:
         "200":
-          description: modificación de status del producto
-  /courtesy/create:
+          description: Lista de materias obtenida exitosamente.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subject"
+  /subjects/create:
     post:
-      summary: crear una cortesia
+      summary: Crear una nueva materia
+      description: Crea una nueva materia en la base de datos.
       tags:
-        - Courtesy
+        - Subjects
       requestBody:
-        requiered: true
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#components/schemas/Courtesy'
+              $ref: "#/components/schemas/SubjectInput"
+      responses:
+        "201":
+          description: Materia creada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+        "400":
+          description: Error en la solicitud.
+
+  /subjects/{id}:
+    get:
+      summary: Obtener una materia por ID
+      description: Retorna los detalles de una materia específica según su ID.
+      tags:
+        - Subjects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID de la materia
       responses:
         "200":
-          description: la cortesia se realizo con exito
-  /user/create:
-    post:
-      summary: crear un usuario
+          description: Materia encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+        "404":
+          description: Materia no encontrada.
+
+    put:
+      summary: Actualizar una materia
+      description: Modifica los datos de una materia existente.
       tags:
-        - Users
-  /categoryProduct/create:
-    post:
-      summary: crear categoria del producto
-      tags:
-        - CategoriesProducts
+        - Subjects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID de la materia
       requestBody:
-        requiered: true
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#components/schemas/CategoryProduct'
+              $ref: "#/components/schemas/SubjectInput"
       responses:
         "200":
-          description: categoria de producto creada
+          description: Materia actualizada exitosamente.
+        "400":
+          description: Error en la solicitud.
+        "404":
+          description: Materia no encontrada.
+
+    delete:
+      summary: Eliminar una materia
+      description: Elimina una materia de la base de datos.
+      tags:
+        - Subjects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID de la materia
+      responses:
+        "200":
+          description: Materia eliminada exitosamente.
+        "404":
+          description: Materia no encontrada.
 components:
   schemas:
-    Order:
+    Career:
       type: object
-      required:
-        - products
-        - totalAmount
+      properties:
+        name:
+          type: string
+          example: "Ingeniería de Sistemas"
+        code:
+          type: string
+          example: "115"
+
+    User:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Juan Pérez"
+        email:
+          type: string
+          example: "juan.perez@example.com"
+        password:
+          type: string
+          format: password
+          example: "123456"
+        role:
+          type: string
+          enum: ["student", "professor"]
+          example: "student"
+        career:
+          type: string
+          description: "ID de la carrera a la que pertenece"
+          example: "67d3b319b244114e7e12ef17"
+        codigo:
+          type: string
+          description: "Código del estudiante o profesor"
+          example: "1151756"
+    Login:
+      type: object
+      properties:
+        email:
+          type: string
+          example: "juan.perez@example.com"
+        password:
+          type: string
+          format: password
+          example: "123456"
+    Advisory:
+      type: object
+      properties:
+        academicFriendCode:
+          type: string
+          description: ID del asesor asignado
+        studentCode:
+          type: string
+          description: ID del estudiante que solicita la asesoría
+        subjectCode:
+          type: string
+          description: Materia de la asesoría
+        topic:
+          type: string
+          description: Tema de la asesoría
+        date:
+          type: string
+          format: date-time
+          description: Fecha de la asesoría
+        status:
+          type: string
+          enum: [pending, confirmed, completed, canceled]
+          description: Estado de la asesoría
+
+    AdvisoryUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, confirmed, completed, canceled]
+          description: Estado actualizado de la asesoría
+    Subject:
+      type: object
       properties:
         id:
           type: string
-          description: ID del pedido
-        products:
-          type: array
-          items:
-            type: object
-            properties:
-              product:
-                $ref: '#/components/schemas/Product'
-              quantity:
-                type: number
-                description: Cantidad del producto
-        totalAmount:
-          type: number
-          description: Monto total del pedido
-        client:
-          $ref: '#/components/schemas/Client'
-        createdAt:
+          description: ID único de la materia.
+        name:
           type: string
-          format: date-time
-          description: Fecha de creación del pedido
-        status:
+          description: Nombre de la materia.
+        careerCode:
           type: string
-          description: Estado del pedido
-          enum:
-            - pending
-            - completed
-            - cancelled
+          description: ID de la carrera asociada a la materia.
       example:
-        products:
-          - product: 612c3bc72f5bf0013c2a08b1
-            quantity: 2
-        totalAmount: 15.5
-        client: null
-        status: pending
-    Product:
-      type: object
-      properties:
-        name: string
-        description: nombre del producto
-        netPrice: string
-        grossPrice: string
-        stock: number
-        categoryId: string
-        status: sting
-        discount: number
-        image: 
-          contentType: image/png, image/jpeg
-      example:
-        name: pan de mil
-        netPrice: 750
-        grossPrice: 1000
-        stock: 40
-        unitType: unit
-        description: delicioso pan de mil
-        categoryId: 66e60252ffe22d9ecdd15822
-        discount: 0
-        status: active
-    ProductUpdate:
-      type: object
-      properties:
-        name: string
-        description: nombre del producto
-        netPrice: string
-        grossPrice: string
-        stock: number
-        categoryId: string
-        discount: number
-        status: sting
-      example:
-        name: pan de mil
-        netPrice: 
-        grossPrice:
-        stock: 40
-        description: delicioso pan de mil
-        categoryId: 66e60252ffe22d9ecdd15822
-        discount: 0
-        status: active
-    Client:
-      type: object
-      properties:
-        name: string
-        description: nombre del cliente
-    ProductStatus:
-      type: object
-      properties:
-        status: string
-      example:
-        status: active
-    CategoryProduct:
-      type: object
-      properties:
-        name: string
-        description: string
-      example:
-        name: panaderia
-        description: todos los productos referentes a panaderia
-    Courtesy:
-      type: object
-      properties:
-        productId: string
-        quantity: number
-      example:
-        productId: 66e73361ca4b207e2bb18c00
-        quantity: 4
-      
+        id: "60f7c0e4a4b5a814d89b2a5d"
+        name: "Programación Avanzada"
+        careerCode: "60f7b1234c8e2f001c9a3b45"
 
-
-
+    SubjectInput:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre de la materia.
+        careerCode:
+          type: string
+          description: ID de la carrera asociada a la materia.
+      required:
+        - name
+        - careerCode
+      example:
+        name: "Matemáticas Discretas"
+        careerCode: "60f7b1234c8e2f001c9a3b45"

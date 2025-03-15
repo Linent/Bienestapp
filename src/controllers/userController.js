@@ -1,37 +1,37 @@
-const UserService = require("../services/userService");
-const handlerError = require("../utils/handlerError");
-const { validationResult } = require("express-validator");
+const User = require("../models/User");
+const { loginUser, registerUser } = require("../services/userService");
+const { handlerError } = require("../handlers/errors.handlers");
+const errorsConstants = require("../constants/errors.constant");
 
-const userService = new UserService();
+exports.register = async (req,res) => {
+try{    const { name, email, password, role, career, codigo } = req.body;
 
-const registerUser = async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    if (!name|| !email || !password || !role || !codigo){
+        return handlerError(res,404, errorsConstants.inputRequired);
     }
+    const userExist = await User.findOne({ email });
+    if(userExist){
+        return handlerError(res, 401, errorsConstants.userExist);
+    }
+    console.log('llega acá');
+    const userSucces = await registerUser(name, email, password, role, career, codigo);
+    return res.status(201).send(userSucces);
+}catch(error){
+    console.log(error);
+    return handlerError(res, 500, errorsConstants.serverError);
+}
+}
 
-    const { name, email, password, role, career, code } = req.body;
-    const user = await userService.registerUser(name, email, password, role, career, code);
-    if (!user) return handlerError(res, "User already exists", 409);
-
-    res.status(201).json({ message: "User registered successfully", user });
-  } catch (error) {
-    res.status(500).send({ message: error.message });
-  }
-};
-
-const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const userData = await userService.loginUser(email, password);
-    
-    if (!userData) return handlerError(res, "Invalid credentials", 401);
-
-    res.status(200).json(userData);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-module.exports = { registerUser, loginUser };
+exports.login = async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const userData = await loginUser(email, password);
+  
+      if (!userData) return handlerError(res, 401, errorsConstants.unauthorized);
+  
+      res.status(200).send(userData);
+    } catch (error) {
+      return handlerError(res, 500, errorsConstants.serverError);
+    }
+  };
+  

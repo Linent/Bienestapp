@@ -1,20 +1,27 @@
 const AttendanceService = require("../services/AttendanceService");
-const handlerError = require("../utils/handlerError");
+const handlerError = require("../handlers/errors.handlers");
+const errorsConstants = require("../constants/errors.constant");
 
-const advisoryService = new AttendanceService();
-
-const registerAttendance = async (req, res) => {
+exports.registerAttendance = async (req, res) => {
   try {
     const { advisoryId, studentCode, status } = req.body;
     if (!advisoryId || !studentCode || !status) {
-      return handlerError(res, "All fields are required", 400);
+      return handlerError(res, 404, errorsConstants.inputRequired);
     }
 
-    const attendance = await advisoryService.registerAttendance(advisoryId, studentCode, status);
-    res.status(201).json({ message: "Attendance registered successfully", attendance });
+    const attendance = await AttendanceService.registerAttendance(advisoryId, studentCode, status);
+    return res.status(201).send(attendance);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
-module.exports = { registerAttendance };
+exports.allAttendance = async (req, res) => {
+  try {
+      const Attendances = await AttendanceService
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+

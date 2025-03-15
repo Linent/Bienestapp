@@ -26,4 +26,9 @@ export const errorsConstants = {
     invalidToken: 'errors.invalid_token',
     tokenRequired: 'errors.token_required',
     userNotFound: 'errors.user_not_found',
+    userNotCreate: 'errors.user_not_create',
+    userExist: 'errors.user_exist',
+    careerExist: 'Career.already.exists',
+    subjectNotExist: 'Subject.not.exists',
+    subjectNotUpdate:'Subject.not.update',
   };

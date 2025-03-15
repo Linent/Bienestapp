@@ -2,7 +2,11 @@ const express = require('express');
 const cors = require("cors");
 const morgan = require("morgan");
 //exportar rutas
-const authRoutes = require("./routes/authRoutes");
+
+const careerRouter = require("./routes/careerRoutes.js");
+const advisoryRouter = require("./routes/advisoryRoutes.js");
+const userRouter = require("./routes/userRoutes.js");
+const subjectRouter = require("./routes/subjectRoutes.js");
 import whatsappRoutes from "./routes/whatsappRoutes.js";
 //
 const swaggerUi = require('swagger-ui-express');
@@ -13,14 +17,11 @@ app.use(cors());
 app.use(express.json());
 
 // Rutas
-app.use('/auth', authRoutes);
-app.use("/", whatsappRoutes);
-/* app.use('/product', productRoutes);
-app.use('/order', orderRoutes);
-app.use('/client', clientRoutes);
-app.use('/categoryProduct', categoryProductsRoutes);
-app.use('/courtesy', courtesyRoutes); */
-
+app.use('/', whatsappRoutes);
+app.use('/career',careerRouter);
+app.use('/advisory',advisoryRouter)
+app.use('/user',userRouter);
+app.use('/subjects',subjectRouter);
 
 
 if (config.NODE_ENV !== 'production') {

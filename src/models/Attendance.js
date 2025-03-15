@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const attendanceSchema = new mongoose.Schema(
   {
@@ -10,4 +10,4 @@ const attendanceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Attendance", attendanceSchema);
+module.exports = mongoose.model("Attendance", attendanceSchema);

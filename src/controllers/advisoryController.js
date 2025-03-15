@@ -1,21 +1,70 @@
-const AdvisoryService = require("../services/AdvisoryService");
-const handlerError = require("../utils/handlerError");
+const AdvisoryService = require("../services/advisoryService");
+const { handlerError } = require("../handlers/errors.handlers");
+const errorsConstants = require("../constants/errors.constant");
+const Advisory = require("../models/Advisory");
 
-const advisoryService = new AdvisoryService();
+
 
 const createAdvisory = async (req, res) => {
   try {
     const { studentCode, academicFriendCode, subjectCode, date, status, topic } = req.body;
-
-    if (!studentCode || !academicFriendCode || !subject) {
-      return handlerError(res, "All fields are required", 400);
+    
+    if (!studentCode || !academicFriendCode || !subjectCode|| !topic || !status|| !date) {
+      return handlerError(res, 404, errorsConstants.inputRequired);
     }
-
-    const advisory = await advisoryService.createAdvisory(studentCode, academicFriendCode, subjectCode, date, status, topic);
-    res.status(201).json({ message: "Advisory created successfully", advisory });
+    const advisory = await AdvisoryService.createAdvisory(studentCode, academicFriendCode, subjectCode, date, status, topic);
+    return res.status(201).send(advisory);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
-module.exports = { createAdvisory };
+const getAllAdvisories = async (req, res) => {
+  try {
+    const advisories = await Advisory.find().populate("student advisor subject");
+    res.status(200).send(advisories);
+  } catch (error) {
+    return handlerError(res, 500, error.message);
+  }
+};
+
+const getAdvisoryById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const advisory = await Advisory.findById(id).populate("student advisor subject");
+    if (!advisory) {
+      return handlerError(res, 404, "Asesoría no encontrada");
+    }
+    res.status(200).send(advisory);
+  } catch (error) {
+    return handlerError(res, 500, error.message);
+  }
+};
+
+const updateAdvisory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const advisory = await Advisory.findByIdAndUpdate(id, req.body, { new: true });
+    if (!advisory) {
+      return handlerError(res, 404, "Asesoría no encontrada");
+    }
+    res.status(200).send({ message: "Asesoría actualizada con éxito", advisory });
+  } catch (error) {
+    return handlerError(res, 500, error.message);
+  }
+};
+
+const deleteAdvisory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const advisory = await Advisory.findByIdAndDelete(id);
+    if (!advisory) {
+      return handlerError(res, 404, "Asesoría no encontrada");
+    }
+    res.status(200).send({ message: "Asesoría eliminada con éxito" });
+  } catch (error) {
+    return handlerError(res, 500, error.message);
+  }
+};
+
+module.exports = { createAdvisory, getAllAdvisories, getAdvisoryById, updateAdvisory, deleteAdvisory };

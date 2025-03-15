@@ -1,6 +1,7 @@
 import { errorsConstants } from "../constants/errors.constant.js"
 import config from "../config/config.js";
-import { handlerError } from "../handlers/errors.handlers.js";
+const handlerError = require("../handlers/errors.handlers");
+
 import { sendMessage } from "../services/whatsappService.js";
 class WhatsappController {
   async verifyWebhook(req, res) {
@@ -16,7 +17,7 @@ class WhatsappController {
         res.sendStatus(403);
       }
     } catch (error) {
-      res.status(500).send({ message: error.message });
+      return handlerError(res, 500, errorsConstants.serverError);
     }
   }
   async handleIncoming(req, res) {
@@ -30,7 +31,7 @@ class WhatsappController {
         res.sendStatus(200);
      
     } catch (error) {
-      res.status(500).send({ message: error.message });
+      return handlerError(res, 500, errorsConstants.serverError);
     }
   }
 }

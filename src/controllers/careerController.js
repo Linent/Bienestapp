@@ -1,29 +1,30 @@
-const CareerService = require("../services/CareerService");
-const handlerError = require("../utils/handlerError");
+const {createCareer, getAllCareers} = require("../services/CareerService");
+const { handlerError } = require("../handlers/errors.handlers");
+const errorsConstants = require("../constants/errors.constant");
 
-const careerService = new CareerService();
-
-const createCareer = async (req, res) => {
+exports.createCareer = async (req, res) => {
   try {
     const { name, code } = req.body;
-    if (!name || !code) return handlerError(res, "Name and code are required", 400);
+    
+    if (!name || !code) { 
+      return  handlerError(res, 404, errorsConstants.inputRequired);
+    }
+    const career = await createCareer(name, code);
+    if (!career) return handlerError(res, 409, errorsConstants.careerExist);
 
-    const career = await careerService.createCareer(name, code);
-    if (!career) return handlerError(res, "Career already exists", 409);
-
-    res.status(201).json({ message: "Career created successfully", career });
+    return res.status(201).send(career);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.log(error);
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
-const getAllCareers = async (req, res) => {
+exports.getAllCareers = async (req, res) => {
   try {
-    const careers = await careerService.getAllCareers();
+    const careers = await getAllCareers();
     res.status(200).json(careers);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
-module.exports = { createCareer, getAllCareers: getAllCareers };

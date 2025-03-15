@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const subjectSchema = new mongoose.Schema(
   {
@@ -8,4 +8,4 @@ const subjectSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Subject", subjectSchema);
+module.exports = mongoose.model("Subject", subjectSchema);

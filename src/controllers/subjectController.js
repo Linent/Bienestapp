@@ -1,31 +1,82 @@
-const SubjectService = require("../services/SubjectService");
-const handlerError = require("../utils/handlerError");
+const SubjectService = require("../services/subjectService");
+const handlerError = require("../handlers/errors.handlers");
+const errorsConstants = require("../constants/errors.constant");
+const subjectController = require("../services/subjectService");
 
-const subjectService = new SubjectService();
-
-const createSubject = async (req, res) => {
+const create = async (req, res) => {
   try {
     const { name, careerCode } = req.body;
     if (!name || !careerCode) {
-      return handlerError(res, "Name and career code are required", 400);
+      return handlerError(res, 400, errorsConstants.inputRequired);
     }
+    const subject = await subjectController.createSubject(name, careerCode);
+    if (!subject) return handlerError(res, 409, errorsConstants.userNotCreate);
 
-    const subject = await subjectService.createSubject(name, careerCode);
-    if (!subject) return handlerError(res, "Subject already exists", 409);
-
-    res.status(201).json({ message: "Subject created successfully", subject });
+    return res.status(201).send(subject);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
-const getAllSubjects = async (req, res) => {
+const getSubjects = async (req, res) => {
   try {
-    const subjects = await subjectService.getAllSubjects();
-    res.status(200).json(subjects);
+    const subjects = await subjectController.getSubjects();
+    return res.status(200).send(subjects);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
-module.exports = { createSubject, getAllSubjects };
+//
+
+const getSubjectById = async (req, res) => {
+  try {
+    const subjectId = req.params.id;
+    const subject = await subjectController.getSubjectBy_Id(subjectId);
+    if (!subject) {
+      return handlerError(res, 400, errorsConstants.subjectNotExist);
+    }
+    res.status(200).send(subject);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+const update = async (req, res) => {
+  try {
+    const { name, career } = req.body;
+    const subjectId = req.params.id;
+    const subject = await subjectController.updateSubject(
+      subjectId,
+      name,
+      career
+    );
+    if (!subject) {
+      return handlerError(res, 400, errorsConstants.subjectNotUpdate);
+    }
+    res.status(200).send(subject);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+const deleteSub = async (req, res) => {
+  try {
+    const subjectId = req.params.id;
+    const subject = await subjectController.deleteSubject(subjectId);
+    if (!subject) {
+      return res.status(404).json({ message: "Materia no encontrada" });
+    }
+    res.status(200).send({ succes: true });
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+module.exports = {
+  create,
+  getSubjects,
+  getSubjectById,
+  update,
+  deleteSub,
+};

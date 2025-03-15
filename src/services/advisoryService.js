@@ -4,14 +4,11 @@ const { handlerError } = require("../handlers/errors.handlers");
 class AdvisoryService {
   async createAdvisory(studentCode, academicFriendCode, subjectCode, date, status, topic) {
     try {
-      if (!studentCode || !academicFriendCode || !subjectCode || !date || !topic) {
-        throw new Error("All fields (studentCode, academicFriendCode, subjectCode, date, status, topic) are required.");
-      }
-
-      const newAdvisory = new Advisory({ studentCode, academicFriendCode, subjectCode, date, status, topic });
-      await newAdvisory.save();
-
-      return newAdvisory;
+      const newAdvisory = new Advisory({ student:studentCode, advisor:academicFriendCode, subject:subjectCode, date, status, topic });
+      console.log(newAdvisory);
+      const registerAdvisory = await newAdvisory.save();
+      console.log(registerAdvisory);
+      return registerAdvisory
     } catch (error) {
       throw handlerError("Error in createAdvisory: " + error.message);
     }
