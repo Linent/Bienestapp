@@ -4,11 +4,11 @@ const errorsConstants = require("../constants/errors.constant");
 
 const createAdvisory = async (req, res) => {
   try {
-    const { advisorId, subjectId, dateStart, status } = req.body;
+    const { advisorId, careerId, dateStart, status } = req.body;
 
     if (
       !advisorId ||
-      !subjectId ||
+      !careerId ||
       !dateStart ||
       !status
     ) {
@@ -17,11 +17,11 @@ const createAdvisory = async (req, res) => {
     
     // Calcular dateEnd sumando 2 horas a dateStart
     const dateEnd = new Date(dateStart);
-    dateEnd.setHours(dateEnd.getHours() + 2);
+    dateEnd.setHours(dateEnd.getHours() + 4);
     
     const advisory = await AdvisoryService.createAdvisory(
       advisorId,
-      subjectId,
+      careerId,
       dateStart,
       dateEnd,
       status

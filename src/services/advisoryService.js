@@ -3,17 +3,15 @@ const { handlerError } = require("../handlers/errors.handlers");
 const { deleteAdvisory } = require("../controllers/advisoryController");
 
 class AdvisoryService {
-  async createAdvisory(advisorId, subjectId, dateStart, dateEnd, status) {
+  async createAdvisory(advisorId, careerId, dateStart, dateEnd, status) {
     try {
       const newAdvisory = new Advisory({
         advisorId,
-        subjectId,
+        careerId,
         dateStart,
         dateEnd,
         status,
       });
-      console.log(newAdvisory);
-      
       const registerAdvisory = await newAdvisory.save();
       return registerAdvisory;
     } catch (error) {
@@ -22,9 +20,10 @@ class AdvisoryService {
   }
   async getAllAdvisory() {
     try {
-      console.log('llega acá');
-      const advisories = await Advisory.find() .populate({ path: "advisorId", select: "name role" }) 
-      .populate({ path: "subjectId", select: "name ", populate: { path: 'career', select: 'name code'} });
+      console.log("llega acá");
+      const advisories = await Advisory.find()
+        .populate({ path: "advisorId", select: "name role" })
+        .populate({ path: "careerId", select: "name" });
 
       return advisories;
     } catch (error) {
@@ -34,7 +33,7 @@ class AdvisoryService {
   async getAdvisoryById(advisoryId) {
     try {
       const advisory = await Advisory.findById(advisoryId).populate(
-        "advisorId subjectId"
+        "advisorId careerId"
       );
       return advisory;
     } catch (error) {
@@ -44,7 +43,8 @@ class AdvisoryService {
   async updateAdvisory(advisoryId, body) {
     try {
       const advisoryUpdate = await Advisory.findByIdAndUpdate(
-        advisoryId, { $set: body } ,
+        advisoryId,
+        { $set: body },
         {
           new: true,
         }
@@ -62,26 +62,7 @@ class AdvisoryService {
       throw handlerError("Error al eliminar la asesoría: " + error.message);
     }
   }
-  /*
-  async getAdvisoriesByFilter(filters) {
-    try {
-      const query = {};
 
-      if (filters.date) query.date = filters.date;
-      if (filters.studentCode) query.studentCode = filters.studentCode;
-      if (filters.academicFriendCode)
-        query.academicFriendCode = filters.academicFriendCode;
-      if (filters.subjectCode) query.subjectCode = filters.subjectCode;
-
-      return await Advisory.find(query)
-        .populate("studentCode")
-        .populate("academicFriendCode")
-        .populate("subjectCode");
-    } catch (error) {
-      throw handlerError(res, "Error fetching advisories: " + error.message);
-    }
-  }
-    */
   // Obtener una asesoría por ID
 }
 

@@ -420,7 +420,7 @@ components:
           type: string
           description: ID del asesor asignado
           example: 123
-        subjectId:
+        careerId:
           type: string
           description: ID de la materia
           example: 456
@@ -441,10 +441,10 @@ components:
           type: string
           description: ID del amigo academico
           example: 67d4df40e1711993d1edd37f
-        SubjectId:
+        careerId:
           type: string
           description: ID de la materia
-          example: 67d5de5ddd8bea965fe8d98c
+          example: 67d3b319b244114e7e12ef17
         dateStart:
           type: string
           format: date-time
