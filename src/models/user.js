@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 const userSchema =  new mongoose.Schema(
     {
+      codigo: { type:String, required: true },
       name: { type: String, required: true },
       email: { type: String, required: true },
       password: { type: String, required: true },
-      role: { type: String, enum: ['student', 'academic_friend', 'admin'] },
       career: { type: mongoose.Schema.Types.ObjectId, ref: 'Career' },
-      codigo: { type:String, required: true }
+      role: { type: String, enum: ['student', 'academic_friend', 'admin'] },
     },
     {
       timestamps: true 

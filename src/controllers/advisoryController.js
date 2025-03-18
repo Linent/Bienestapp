@@ -1,18 +1,31 @@
 const AdvisoryService = require("../services/advisoryService");
 const { handlerError } = require("../handlers/errors.handlers");
 const errorsConstants = require("../constants/errors.constant");
-const Advisory = require("../models/Advisory");
-
-
 
 const createAdvisory = async (req, res) => {
   try {
-    const { studentCode, academicFriendCode, subjectCode, date, status, topic } = req.body;
-    
-    if (!studentCode || !academicFriendCode || !subjectCode|| !topic || !status|| !date) {
+    const { advisorId, subjectId, dateStart, status } = req.body;
+
+    if (
+      !advisorId ||
+      !subjectId ||
+      !dateStart ||
+      !status
+    ) {
       return handlerError(res, 404, errorsConstants.inputRequired);
     }
-    const advisory = await AdvisoryService.createAdvisory(studentCode, academicFriendCode, subjectCode, date, status, topic);
+    
+    // Calcular dateEnd sumando 2 horas a dateStart
+    const dateEnd = new Date(dateStart);
+    dateEnd.setHours(dateEnd.getHours() + 2);
+    
+    const advisory = await AdvisoryService.createAdvisory(
+      advisorId,
+      subjectId,
+      dateStart,
+      dateEnd,
+      status
+    );
     return res.status(201).send(advisory);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
@@ -21,8 +34,8 @@ const createAdvisory = async (req, res) => {
 
 const getAllAdvisories = async (req, res) => {
   try {
-    const advisories = await Advisory.find().populate("student advisor subject");
-    res.status(200).send(advisories);
+    const allAdvisories = await AdvisoryService.getAllAdvisory()
+    return res.status(200).send(allAdvisories);
   } catch (error) {
     return handlerError(res, 500, error.message);
   }
@@ -30,11 +43,13 @@ const getAllAdvisories = async (req, res) => {
 
 const getAdvisoryById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const advisory = await Advisory.findById(id).populate("student advisor subject");
-    if (!advisory) {
-      return handlerError(res, 404, "Asesoría no encontrada");
+    const { advisoryId } = req.params;
+    console.log(advisoryId);
+    if (!advisoryId) {
+      return handlerError(res, 404, errorsConstants.inputIdRequired);
     }
+    const advisory = await AdvisoryService.getAdvisoryById(advisoryId);
+    
     res.status(200).send(advisory);
   } catch (error) {
     return handlerError(res, 500, error.message);
@@ -43,12 +58,16 @@ const getAdvisoryById = async (req, res) => {
 
 const updateAdvisory = async (req, res) => {
   try {
-    const { id } = req.params;
-    const advisory = await Advisory.findByIdAndUpdate(id, req.body, { new: true });
-    if (!advisory) {
-      return handlerError(res, 404, "Asesoría no encontrada");
+    const { advisoryId } = req.params;
+    if(!advisoryId){
+      return handlerError(res,400, errorsConstants.inputIdRequired);
     }
-    res.status(200).send({ message: "Asesoría actualizada con éxito", advisory });
+    const body = req.body;
+    const advisory = await AdvisoryService.updateAdvisory(advisoryId, body );
+    if (!advisory) {
+      return handlerError(res, 404, errorsConstants.advisoryNotUpdate);
+    }
+    res.status(200).send(advisory );
   } catch (error) {
     return handlerError(res, 500, error.message);
   }
@@ -56,15 +75,21 @@ const updateAdvisory = async (req, res) => {
 
 const deleteAdvisory = async (req, res) => {
   try {
-    const { id } = req.params;
-    const advisory = await Advisory.findByIdAndDelete(id);
+    const { advisoryId } = req.params;
+    const advisory = await AdvisoryService.deleteAdvisory(advisoryId);
     if (!advisory) {
       return handlerError(res, 404, "Asesoría no encontrada");
     }
-    res.status(200).send({ message: "Asesoría eliminada con éxito" });
+    res.status(200).send({ succes: true });
   } catch (error) {
     return handlerError(res, 500, error.message);
   }
 };
 
-module.exports = { createAdvisory, getAllAdvisories, getAdvisoryById, updateAdvisory, deleteAdvisory };
+module.exports = {
+  createAdvisory,
+  getAllAdvisories,
+  getAdvisoryById,
+  updateAdvisory,
+  deleteAdvisory,
+};

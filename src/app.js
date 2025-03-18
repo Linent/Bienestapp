@@ -7,6 +7,7 @@ const careerRouter = require("./routes/careerRoutes.js");
 const advisoryRouter = require("./routes/advisoryRoutes.js");
 const userRouter = require("./routes/userRoutes.js");
 const subjectRouter = require("./routes/subjectRoutes.js");
+const scheduleRouter = require('./routes/scheduleRoutes.js');
 import whatsappRoutes from "./routes/whatsappRoutes.js";
 //
 const swaggerUi = require('swagger-ui-express');
@@ -19,6 +20,7 @@ app.use(express.json());
 // Rutas
 app.use('/', whatsappRoutes);
 app.use('/career',careerRouter);
+app.use('/schedules', scheduleRouter);
 app.use('/advisory',advisoryRouter)
 app.use('/user',userRouter);
 app.use('/subjects',subjectRouter);

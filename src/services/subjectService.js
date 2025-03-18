@@ -15,7 +15,7 @@ exports.createSubject = async (name, careerCode) => {
 
     return newSubject;
   } catch (error) {
-    throw handlerError("Error in createSubject: " + error.message);
+    return { message:error }
   }
 };
 

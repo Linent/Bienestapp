@@ -89,74 +89,70 @@ paths:
           description: Credenciales inválidas
         "500":
           description: Error interno del servidor
+  /advisory:
+    get:
+      summary: Obtener todas las asesorías
+      tags: 
+        - Advisory
+      responses:
+        '200':
+          description: Lista de asesorías
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/advisory'
   /advisory/create:
     post:
-      summary: Crear una asesoría
-      tags:
+      summary: Crear una nueva asesoría
+      tags: 
         - Advisory
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Advisory'
+              $ref: '#/components/schemas/advisory'
       responses:
         '201':
-          description: Asesoría creada con éxito
+          description: Asesoría creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/advisory'
         '400':
           description: Datos inválidos
-        '403':
-          description: No autorizado
-        '500':
-          description: Error en el servidor
-  /advisory/:
+  /advisory/{advisoryId}:
     get:
-      summary: Obtener todas las asesorías
-      tags:
-        - Advisory
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Lista de asesorías obtenida con éxito
-        '403':
-          description: No autorizado
-        '500':
-          description: Error en el servidor
-
-  /advisory/{id}:
-    get:
-      summary: Obtener asesoría por ID
-      tags:
+      summary: Obtener una asesoría por ID
+      tags: 
         - Advisory
       parameters:
-        - in: path
-          name: id
+        - name: advisoryId
+          in: path
+          required: true
           schema:
             type: string
-          required: true
-          description: ID de la asesoría
       responses:
         '200':
-          description: Asesoría obtenida con éxito
+          description: Detalles de la asesoría
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/advisory'
         '404':
           description: Asesoría no encontrada
-        '500':
-          description: Error en el servidor
-
     put:
       summary: Actualizar una asesoría
-      tags:
+      tags: 
         - Advisory
       parameters:
-        - in: path
-          name: id
+        - name: advisoryId
+          in: path
+          required: true
           schema:
             type: string
-          required: true
-          description: ID de la asesoría a actualizar
       requestBody:
         required: true
         content:
@@ -165,30 +161,30 @@ paths:
               $ref: '#/components/schemas/AdvisoryUpdate'
       responses:
         '200':
-          description: Asesoría actualizada con éxito
+          description: Asesoría actualizada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvisoryUpdate'
+        '400':
+          description: Datos inválidos
         '404':
           description: Asesoría no encontrada
-        '500':
-          description: Error en el servidor
-
     delete:
       summary: Eliminar una asesoría
-      tags:
+      tags: 
         - Advisory
       parameters:
-        - in: path
-          name: id
+        - name: advisoryId
+          in: path
+          required: true
           schema:
             type: string
-          required: true
-          description: ID de la asesoría a eliminar
       responses:
         '200':
-          description: Asesoría eliminada con éxito
+          description: Asesoría eliminada correctamente
         '404':
           description: Asesoría no encontrada
-        '500':
-          description: Error en el servidor
   /subjects:
     get:
       summary: Obtener todas las materias
@@ -292,6 +288,84 @@ paths:
           description: Materia eliminada exitosamente.
         "404":
           description: Materia no encontrada.
+  /schedules:
+    get:
+      summary: Obtener todas las asistencias agendadas
+      tags:
+        - Schedule
+      responses:
+        200:
+          description: Lista de asistencias agendadas obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+  /schedules/create:
+    post:
+      summary: Crear un nuevo registro de asistencia agendada
+      tags:
+        - Schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+      responses:
+        201:
+          description: Registro de asistencia agendada creado exitosamente
+  /schedules/{scheduleId}:
+    get:
+      summary: Obtener un registro de asistencia agendada por ID
+      tags:
+        - Schedule
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Registro de asistencia obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+    put:
+      summary: Actualizar un registro de asistencia agendada
+      tags:
+        - Schedule
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+      responses:
+        200:
+          description: Registro actualizado exitosamente
+    delete:
+      summary: Eliminar un registro de asistencia agendada
+      tags:
+        - Schedule
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Registro eliminado exitosamente
 components:
   schemas:
     Career:
@@ -339,37 +413,47 @@ components:
           type: string
           format: password
           example: "123456"
-    Advisory:
+    advisory:
       type: object
       properties:
-        academicFriendCode:
+        advisorId:
           type: string
           description: ID del asesor asignado
-        studentCode:
+          example: 123
+        subjectId:
           type: string
-          description: ID del estudiante que solicita la asesoría
-        subjectCode:
-          type: string
-          description: Materia de la asesoría
-        topic:
-          type: string
-          description: Tema de la asesoría
-        date:
+          description: ID de la materia
+          example: 456
+        dateStart:
           type: string
           format: date-time
-          description: Fecha de la asesoría
+          description: Fecha y hora de inicio
         status:
           type: string
-          enum: [pending, confirmed, completed, canceled]
+          enum: [pending, approved, completed, canceled]
           description: Estado de la asesoría
+          example: pending
 
     AdvisoryUpdate:
       type: object
       properties:
+        advisoryId:
+          type: string
+          description: ID del amigo academico
+          example: 67d4df40e1711993d1edd37f
+        SubjectId:
+          type: string
+          description: ID de la materia
+          example: 67d5de5ddd8bea965fe8d98c
+        dateStart:
+          type: string
+          format: date-time
+          description: Fecha y hora de inicio
         status:
           type: string
           enum: [pending, confirmed, completed, canceled]
           description: Estado actualizado de la asesoría
+          example: pending
     Subject:
       type: object
       properties:
@@ -402,3 +486,26 @@ components:
       example:
         name: "Matemáticas Discretas"
         careerCode: "60f7b1234c8e2f001c9a3b45"
+    Schedule:
+      type: object
+      properties:
+        studentId:
+          type: string
+          description: ID del estudiante
+          example: 67d4df03e1711993d1edd37b
+        advisoryId:
+          type: string
+          description: ID de la asesoría relacionada
+          example:
+        topic:
+          type: string
+          description: Tema específico de la asesoría
+          example: conjuntos
+        attendance:
+          type: boolean
+          description: Indica si el estudiante asistió o no
+          example: false
+        status:
+          type: string
+          enum: [pending, approved, completed, canceled]
+          description: Estado de la asistencia agendada
