@@ -366,6 +366,42 @@ paths:
       responses:
         200:
           description: Registro eliminado exitosamente
+  /advisory/report/{filterType}:
+    get:
+      summary: Obtener cantidad de asesorías por día, mes o año
+      tags:
+        - Schedule
+      parameters:
+        - name: filterType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [day, week,month, year]
+      responses:
+        "200":
+          description: Retorna la cantidad de asesorías agrupadas por fecha
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/advisoryReport'
+
+  /advisory/report/top-careers:
+    get:
+      summary: Obtener las 5 carreras con más asesorías
+      tags:
+        - Schedule
+      responses:
+        "200":
+          description: Retorna las carreras con más asesorías
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/careerReport'
 components:
   schemas:
     Career:
@@ -509,3 +545,22 @@ components:
           type: string
           enum: [pending, approved, completed, canceled]
           description: Estado de la asistencia agendada
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2025-03-01"
+        totalAdvisories:
+          type: integer
+          example: 15
+
+    careerReport:
+      type: object
+      properties:
+        career:
+          type: string
+          example: "Ingeniería de Sistemas"
+        totalAdvisories:
+          type: integer
+          example: 40

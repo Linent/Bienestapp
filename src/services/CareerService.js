@@ -4,7 +4,6 @@ const { handlerError } = require("../handlers/errors.handlers");
 exports.createCareer = async (name, code) => {
   try {
     const newCareer = new Career({ name, code });
-    console.log(newCareer);
     await newCareer.save();
 
     return newCareer;

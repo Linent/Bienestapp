@@ -37,7 +37,7 @@ const getAllAdvisories = async (req, res) => {
     const allAdvisories = await AdvisoryService.getAllAdvisory()
     return res.status(200).send(allAdvisories);
   } catch (error) {
-    return handlerError(res, 500, error.message);
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
@@ -52,7 +52,7 @@ const getAdvisoryById = async (req, res) => {
     
     res.status(200).send(advisory);
   } catch (error) {
-    return handlerError(res, 500, error.message);
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
@@ -69,7 +69,7 @@ const updateAdvisory = async (req, res) => {
     }
     res.status(200).send(advisory );
   } catch (error) {
-    return handlerError(res, 500, error.message);
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
@@ -78,11 +78,30 @@ const deleteAdvisory = async (req, res) => {
     const { advisoryId } = req.params;
     const advisory = await AdvisoryService.deleteAdvisory(advisoryId);
     if (!advisory) {
-      return handlerError(res, 404, "Asesoría no encontrada");
+      return handlerError(res,400, errorsConstants.inputIdRequired);
     }
     res.status(200).send({ succes: true });
   } catch (error) {
-    return handlerError(res, 500, error.message);
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+const getReportByDate = async (req, res) => {
+  try {
+    const { filterType } = req.params;
+    const report = await AdvisoryService.getAdvisoryReport(filterType);
+    res.status(200).send(report);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+const getTopCareersReport = async (req, res) => {
+  try {
+    const report = await AdvisoryService.getTopCareers();
+    res.send(report);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
@@ -92,4 +111,6 @@ module.exports = {
   getAdvisoryById,
   updateAdvisory,
   deleteAdvisory,
+  getTopCareersReport,
+  getReportByDate
 };
