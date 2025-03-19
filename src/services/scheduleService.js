@@ -24,7 +24,6 @@ exports.createSchedule = async (studentId, topic, advisoryId, status) => {
 //{ path:'AdvisoryId', select: 'advisorId ' }
 exports.getSchedules = async () => {
   try {
-    console.log('llega acá');
     const schedules = await Schedule.find().populate({ path:'studentId', select:'name codigo email'}).populate({path: 'AdvisoryId', select:'subjectId dateStart status', populate:{path: 'advisorId ', select:'name'}, populate: { path: 'subjectId', select: 'name career', populate: { path: 'career', select: 'name' } } });
     return schedules;
   } catch (error) {

@@ -86,15 +86,97 @@ const deleteAdvisory = async (req, res) => {
   }
 };
 
-const getReportByDate = async (req, res) => {
+/* // Reporte por semana
+const getAdvisoryReportByWeek = async (req, res) => {
   try {
-    const { filterType } = req.params;
-    const report = await AdvisoryService.getAdvisoryReport(filterType);
+    const report = await AdvisoryService.getReportByWeek();
     res.status(200).send(report);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+    }
+};
+
+// Reporte por mes
+const getAdvisoryReportByMonth = async (req, res) => {
+  try {
+    const { year } = req.query; // Obtener el año desde los parámetros de consulta
+    if (!year) {
+      return res.status(400).send({ message: "El año es obligatorio" });
+    }
+    const report = await AdvisoryService.getReportByMonth(parseInt(year));
+    res.status(200).json(report);
+  } catch (error) {    
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+*/
+// Reporte por año
+const getAdvisoryReportByYear = async (req, res) => {
+  try {
+    const { year } = req.query; // Obtener el año desde los parámetros de consulta
+    if (!year) {
+      return res.status(400).json({ message: "El año es obligatorio" });
+    }
+    const report = await AdvisoryService.getReportByYear(parseInt(year));
+    return res.status(200).send(report);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+}; 
+// Reporte de los últimos 7 días
+const getAdvisoryReportLast7Days = async (req, res) => {
+  try {
+    const report = await AdvisoryService.getReportLast7Days();
+    return res.status(200).send(report);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
+
+// Reporte de los últimos 30 días
+const getAdvisoryReportLast30Days = async (req, res) => {
+  try {
+    const report = await AdvisoryService.getReportLast30Days();
+    return res.status(200).send(report);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+// Reporte de asesorías mensuales en el último año
+const getAdvisoryReportLastYear = async (req, res) => {
+  try {
+    const report = await AdvisoryService.getReportLastYear();
+    return res.status(200).send(report);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+// Reporte en un rango de fechas personalizado
+const getAdvisoryReportByDateRange = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "Las fechas de inicio y fin son obligatorias" });
+    }
+    const report = await AdvisoryService.getReportByDateRange(startDate, endDate);
+    return res.status(200).send(report);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+// Reporte del usuario con más asesorías asignadas
+const getMostActiveAdvisor = async (req, res) => {
+  try {
+    const report = await AdvisoryService.getMostActiveAdvisor();
+    res.status(200).json(report);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
 
 const getTopCareersReport = async (req, res) => {
   try {
@@ -111,6 +193,15 @@ module.exports = {
   getAdvisoryById,
   updateAdvisory,
   deleteAdvisory,
-  getTopCareersReport,
-  getReportByDate
+  getAdvisoryReportByYear,
+  getAdvisoryReportLast7Days,
+  getAdvisoryReportLast30Days,
+  getAdvisoryReportLastYear,
+  getAdvisoryReportByDateRange,
+  getMostActiveAdvisor,
+  getTopCareersReport
 };
+/*
+getAdvisoryReportByWeek,
+getAdvisoryReportByMonth,
+*/

@@ -13,7 +13,6 @@ try{    const { name, email, password, role, career, codigo } = req.body;
     if(userExist){
         return handlerError(res, 401, errorsConstants.userExist);
     }
-    console.log('llega acá');
     const userSucces = await registerUser(name, email, password, role, career, codigo);
     return res.status(201).send(userSucces);
 }catch(error){

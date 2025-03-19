@@ -15,7 +15,8 @@ tags:
     description: Rutas de usuarios
   - name: Advisory
     description: Rutas de asesorías
-
+security:
+  - ApiKeyAuth: []
 paths:
   /career/create:
     post:
@@ -366,33 +367,118 @@ paths:
       responses:
         200:
           description: Registro eliminado exitosamente
-  /advisory/report/{filterType}:
+  /advisory/report/last7days:
     get:
-      summary: Obtener cantidad de asesorías por día, mes o año
+      summary: Obtener el reporte de asesorías de los últimos 7 días
       tags:
-        - Schedule
-      parameters:
-        - name: filterType
-          in: path
-          required: true
-          schema:
-            type: string
-            enum: [day, week,month, year]
+        - Advisory
       responses:
         "200":
-          description: Retorna la cantidad de asesorías agrupadas por fecha
+          description: Informe de asesorías agrupadas por día
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/advisoryReport'
+                  $ref: "#/components/schemas/AdvisoryReport"
 
+  /advisory/report/last30days:
+    get:
+      summary: Obtener el reporte de asesorías de los últimos 30 días
+      tags:
+        - Advisory
+      responses:
+        "200":
+          description: Informe de asesorías agrupadas por día
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdvisoryReport"
+
+  /advisory/report/lastyear:
+    get:
+      summary: Obtener el reporte de asesorías de cada mes en el último año
+      tags:
+        - Advisory
+      responses:
+        "200":
+          description: Informe de asesorías agrupadas por mes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdvisoryReport"
+
+  /advisory/report/bydaterange:
+    get:
+      summary: Obtener el reporte de asesorías en un rango de fechas específico
+      tags:
+        - Advisory
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Fecha de inicio en formato YYYY-MM-DD
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Fecha de finalización en formato YYYY-MM-DD
+      responses:
+        "200":
+          description: Informe de asesorías dentro del rango de fechas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdvisoryReport"
+
+  /advisory/report/mostActiveAdvisor:
+    get:
+      summary: Obtener el asesor con más asesorías asignadas
+      tags:
+        - Advisory
+      responses:
+        "200":
+          description: Información del asesor más solicitado, incluyendo nombre, topic y carrera.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MostActiveAdvisor"
+  /advisory/reports/yearly:
+    get:
+      summary: Obtener reporte de asesorías por año
+      tags:
+        - Advisory
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reporte de asesorías anuales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdvisoryReport"
   /advisory/report/top-careers:
     get:
       summary: Obtener las 5 carreras con más asesorías
       tags:
-        - Schedule
+        - Advisory
       responses:
         "200":
           description: Retorna las carreras con más asesorías
@@ -469,7 +555,116 @@ components:
           enum: [pending, approved, completed, canceled]
           description: Estado de la asesoría
           example: pending
+    Advisory:
+      type: object
+      properties:
+        id:
+          type: string
+        advisorId:
+          type: string
+        careerId:
+          type: string
+        dateStart:
+          type: string
+          format: date-time
+        dateEnd:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, approved, completed, canceled]
 
+    SubjectInput:
+      type: object
+      properties:
+        advisorId:
+          type: string
+        careerId:
+          type: string
+        dateStart:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, approved, completed, canceled]
+    MostActiveAdvisor:
+      type: object
+      properties:
+        advisorId:
+          type: string
+          description: ID del asesor más solicitado
+          example: "65f2bce5b99a345ad43cd123"
+        advisorName:
+          type: string
+          description: Nombre del asesor
+          example: "Juan Pérez"
+        totalAdvisories:
+          type: integer
+          description: Número total de asesorías asignadas
+          example: 25
+        topic:
+          type: string
+          description: Tema específico de la asesoría
+          example: "Cinemática"
+        career:
+          type: string
+          description: Carrera relacionada con la asesoría
+          example: "Ingeniería Mecánica"
+      type: object
+      properties:
+        advisorId:
+          type: string
+          description: ID del asesor más solicitado
+          example: "65f2bce5b99a345ad43cd123"
+        advisorName:
+          type: string
+          description: Nombre del asesor
+          example: "Juan Pérez"
+        totalAdvisories:
+          type: integer
+          description: Número total de asesorías asignadas
+          example: 25
+        name:
+          type: string
+          description: Nombre de la asesoría
+          example: "Asesoría en Física"
+        topic:
+          type: string
+          description: Tema específico de la asesoría
+          example: "Cinemática"
+        career:
+          type: string
+          description: Carrera relacionada con la asesoría
+          example: "Ingeniería Mecánica"
+    AdvisoryReport:
+      type: object
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+        week:
+          type: integer
+        totalAdvisories:
+          type: integer
+    AdvisoryReport:
+      type: object
+      properties:
+        _id:
+          type: object
+          properties:
+            year:
+              type: integer
+              example: 2024
+            month:
+              type: integer
+              example: 3
+            day:
+              type: integer
+              example: 15
+        totalAdvisories:
+          type: integer
+          example: 12
     AdvisoryUpdate:
       type: object
       properties:
