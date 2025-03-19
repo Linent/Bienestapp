@@ -8,6 +8,16 @@ servers:
   - url: http://localhost:8080
     description: Servidor local
 
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []
+
 tags:
   - name: Careers
     description: Rutas de carreras
@@ -70,8 +80,9 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/Login'
+            example:
+              email: "usuario@example.com"
+              password: "123456"
       responses:
         "200":
           description: Inicio de sesión exitoso
@@ -83,8 +94,6 @@ paths:
                   token:
                     type: string
                     example: "eyJhbGciOiJIUzI1NiIsIn..."
-                  user:
-                    $ref: '#/components/schemas/User'
         "400":
           description: Credenciales inválidas
         "500":
@@ -293,6 +302,8 @@ paths:
       summary: Obtener todas las asistencias agendadas
       tags:
         - Schedule
+      security:
+        - BearerAuth: []
       responses:
         200:
           description: Lista de asistencias agendadas obtenida exitosamente
@@ -313,6 +324,10 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Schedule'
+            example:
+              "studentId": "67d4df03e1711993d1edd37b"
+              "topic": "Introducción a la Programación"
+              "advisoryId": "67d8d485dc4bf243ae06a1fc"
       responses:
         201:
           description: Registro de asistencia agendada creado exitosamente

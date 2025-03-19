@@ -4,30 +4,31 @@ const JwtService = require("./jwt");
 const { handlerError } = require("../handlers/errors.handlers");
 
 exports.registerUser = async (name, email, password, role, career, codigo) => {
-  try{const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    throw new Error("El usuario ya está registrado.");
+  try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      throw new Error("El usuario ya está registrado.");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      career,
+      codigo,
+    });
+    const createUser = await newUser.save();
+
+    return createUser;
+  } catch (error) {
+    console.log(error);
   }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = new User({
-    name,
-    email,
-    password: hashedPassword,
-    role,
-    career,
-    codigo,
-  });
-  const createUser = await newUser.save();
-
-  return createUser;
-} catch(error){
-  console.log(error);
-}
 };
 
 exports.loginUser = async (email, password) => {
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email }, { projection: { password: 0 } });
   if (!user) {
     throw new Error("Usuario no encontrado.");
   }

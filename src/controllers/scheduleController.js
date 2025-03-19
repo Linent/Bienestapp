@@ -1,17 +1,20 @@
 const { errorsConstants } = require("../constants/errors.constant");
 const { handlerError } = require("../handlers/errors.handlers");
-const ScheduleService = require('../services/scheduleService');
+const ScheduleService = require("../services/scheduleService");
 
 // Crear un nuevo registro en el horario (schedule)
 const createSchedule = async (req, res) => {
   try {
-    const { studentId, topic, advisoryId, status } = req.body;
-    //console.log(studentId, attendance, topic, advisoryId, status);
-    if(!studentId|| !topic|| !advisoryId|| !status){
-        return handlerError(res,400, errorsConstants.inputRequired);
+    const { studentId, topic, advisoryId } = req.body;
+    if (!studentId || !topic || !advisoryId) {
+      return handlerError(res, 400, errorsConstants.inputRequired);
     }
-    const newSchedule = await ScheduleService.createSchedule(studentId, topic, advisoryId, status);
-    
+    const newSchedule = await ScheduleService.createSchedule(
+      studentId,
+      topic,
+      advisoryId
+    );
+
     res.status(201).send(newSchedule);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
@@ -32,9 +35,10 @@ const getSchedules = async (req, res) => {
 const getScheduleById = async (req, res) => {
   try {
     const { scheduleId } = req.params;
-    console.log('esto');
 
-    if (!scheduleId) { return handlerError(res,400, errorsConstants.inputIdRequired) };
+    if (!scheduleId) {
+      return handlerError(res, 400, errorsConstants.inputIdRequired);
+    }
 
     const getSchedule = await ScheduleService.getScheduleById(scheduleId);
     return res.status(200).send(getSchedule);
@@ -45,12 +49,27 @@ const getScheduleById = async (req, res) => {
 
 // Actualizar el estado de asistencia
 const updateSchedule = async (req, res) => {
+  //?example how to valid by role
+  //!TODO on anothers controllers
+  const usersValid = ["academic_friend", "admin"];
+
+  if (!usersValid.includes(req.user.role))
+    return res.status(403).json({ message: "User not autorized" });
+
   try {
-    const { attendance, status, AdvisoryId } = req.body;
-    const ScheduleId = req.params;
-    const updateScheduleStatus = await ScheduleService.updateSchedule(ScheduleId, AdvisoryId, attendance, status);
-    
-    if (!updatedSchedule) return res.status(404).send({ message: "Schedule not found" });
+    let dataToUpdate = {
+      updateAt: new Date(),
+      ...req.body,
+    };
+
+    const { scheduleId } = req.params;
+    const updateScheduleStatus = await ScheduleService.updateSchedule(
+      scheduleId,
+      dataToUpdate
+    );
+
+    if (!updateScheduleStatus)
+      return res.status(404).send({ message: "Schedule not found" });
     res.send(updateScheduleStatus);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
@@ -60,17 +79,24 @@ const updateSchedule = async (req, res) => {
 // Eliminar un registro de horario
 const deleteSchedule = async (req, res) => {
   try {
-    const { scheduleId } = req.params
-    if(!scheduleId){
-      return handlerError(res,400, errorsConstants.inputIdRequired);
+    const { scheduleId } = req.params;
+    if (!scheduleId) {
+      return handlerError(res, 400, errorsConstants.inputIdRequired);
     }
     const deletedSchedule = await ScheduleService.deleteSchedule(scheduleId);
 
-    if (!deletedSchedule) return res.status(404).json({ message: "Schedule not found" });
+    if (!deletedSchedule)
+      return res.status(404).json({ message: "Schedule not found" });
     res.status(200).send({ succes: true });
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
-module.exports = { createSchedule, getSchedules, getScheduleById, updateSchedule, deleteSchedule };
+module.exports = {
+  createSchedule,
+  getSchedules,
+  getScheduleById,
+  updateSchedule,
+  deleteSchedule,
+};
