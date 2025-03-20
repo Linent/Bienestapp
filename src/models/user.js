@@ -7,6 +7,7 @@ const userSchema =  new mongoose.Schema(
       password: { type: String, required: true },
       career: { type: mongoose.Schema.Types.ObjectId, ref: 'Career' },
       role: { type: String, enum: ['student', 'academic_friend', 'admin'] },
+      enable: { type: Boolean, default: true }
     },
     {
       timestamps: true 

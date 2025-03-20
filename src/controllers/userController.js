@@ -43,3 +43,4 @@ exports.login = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
+

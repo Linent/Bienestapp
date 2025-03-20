@@ -40,7 +40,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Career'
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Ingeniería de Sistemas"
+                code:
+                  type: string
+                  example: "115"
       responses:
         "201":
           description: Carrera creada con éxito
@@ -132,12 +139,7 @@ paths:
       responses:
         '200':
           description: Lista de asesorías
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/advisory'
+
   /advisory/create:
     post:
       summary: Crear una nueva asesoría
@@ -190,10 +192,6 @@ paths:
       responses:
         '200':
           description: Detalles de la asesoría
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/advisory'
         '404':
           description: Asesoría no encontrada
     put:
@@ -211,14 +209,29 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AdvisoryUpdate'
+              type: object
+              properties:
+                advisoryId:
+                  type: string
+                  description: ID del amigo academico
+                  example: 67d4df40e1711993d1edd37f
+                careerId:
+                  type: string
+                  description: ID de la materia
+                  example: 67d3b319b244114e7e12ef17
+                dateStart:
+                  type: string
+                  format: date-time
+                  description: Fecha y hora de inicio
+                status:
+                  type: string
+                  enum: [pending, confirmed, completed, canceled]
+                  description: Estado actualizado de la asesoría
+                  example: pending
+
       responses:
         '200':
           description: Asesoría actualizada correctamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdvisoryUpdate'
         '400':
           description: Datos inválidos
         '404':
@@ -271,10 +284,6 @@ paths:
       responses:
         200:
           description: Registro de asistencia obtenido exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Schedule'
     put:
       summary: Actualizar un registro de asistencia agendada
       tags:
@@ -368,10 +377,7 @@ paths:
       responses:
         "200":
           description: Información del asesor más solicitado, incluyendo nombre, topic y carrera.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MostActiveAdvisor"
+
   /advisory/reports/yearly:
     get:
       summary: Obtener reporte de asesorías por año
@@ -395,156 +401,3 @@ paths:
       responses:
         "200":
           description: Retorna las carreras con más asesorías
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/careerReport'
-components:
-  schemas:
-    Career:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "Ingeniería de Sistemas"
-        code:
-          type: string
-          example: "115"
-
-    advisory:
-
-
-    SubjectInput:
-      type: object
-      properties:
-        advisorId:
-          type: string
-        careerId:
-          type: string
-        dateStart:
-          type: string
-          format: date-time
-        status:
-          type: string
-          enum: [pending, approved, completed, canceled]
-    MostActiveAdvisor:
-      type: object
-      properties:
-        advisorId:
-          type: string
-          description: ID del asesor más solicitado
-          example: "65f2bce5b99a345ad43cd123"
-        advisorName:
-          type: string
-          description: Nombre del asesor
-          example: "Juan Pérez"
-        totalAdvisories:
-          type: integer
-          description: Número total de asesorías asignadas
-          example: 25
-        topic:
-          type: string
-          description: Tema específico de la asesoría
-          example: "Cinemática"
-        career:
-          type: string
-          description: Carrera relacionada con la asesoría
-          example: "Ingeniería Mecánica"
-      type: object
-      properties:
-        advisorId:
-          type: string
-          description: ID del asesor más solicitado
-          example: "65f2bce5b99a345ad43cd123"
-        advisorName:
-          type: string
-          description: Nombre del asesor
-          example: "Juan Pérez"
-        totalAdvisories:
-          type: integer
-          description: Número total de asesorías asignadas
-          example: 25
-        name:
-          type: string
-          description: Nombre de la asesoría
-          example: "Asesoría en Física"
-        topic:
-          type: string
-          description: Tema específico de la asesoría
-          example: "Cinemática"
-        career:
-          type: string
-          description: Carrera relacionada con la asesoría
-          example: "Ingeniería Mecánica"
-
-      type: object
-      properties:
-        _id:
-          type: object
-          properties:
-            year:
-              type: integer
-              example: 2024
-            month:
-              type: integer
-              example: 3
-            day:
-              type: integer
-              example: 15
-        totalAdvisories:
-          type: integer
-          example: 12
-    AdvisoryUpdate:
-      type: object
-      properties:
-        advisoryId:
-          type: string
-          description: ID del amigo academico
-          example: 67d4df40e1711993d1edd37f
-        careerId:
-          type: string
-          description: ID de la materia
-          example: 67d3b319b244114e7e12ef17
-        dateStart:
-          type: string
-          format: date-time
-          description: Fecha y hora de inicio
-        status:
-          type: string
-          enum: [pending, confirmed, completed, canceled]
-          description: Estado actualizado de la asesoría
-          example: pending
-    Subject:
-      type: object
-      properties:
-        id:
-          type: string
-          description: ID único de la materia.
-        name:
-          type: string
-          description: Nombre de la materia.
-        careerCode:
-          type: string
-          description: ID de la carrera asociada a la materia.
-      example:
-        id: "60f7c0e4a4b5a814d89b2a5d"
-        name: "Programación Avanzada"
-        careerCode: "60f7b1234c8e2f001c9a3b45"
-
-    SubjectInput:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Nombre de la materia.
-        careerCode:
-          type: string
-          description: ID de la carrera asociada a la materia.
-      required:
-        - name
-        - careerCode
-      example:
-        name: "Matemáticas Discretas"
-        careerCode: "60f7b1234c8e2f001c9a3b45"
