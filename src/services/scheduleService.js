@@ -24,7 +24,7 @@ exports.createSchedule = async (studentId, topic, advisoryId, status) => {
 //{ path:'AdvisoryId', select: 'advisorId ' }
 exports.getSchedules = async () => {
   try {
-    const schedules = await Schedule.find().populate({ path:'studentId', select:'name codigo email'}).populate({path: 'AdvisoryId', select:'subjectId dateStart status', populate:{path: 'advisorId ', select:'name'}, populate: { path: 'subjectId', select: 'name career', populate: { path: 'career', select: 'name' } } });
+    const schedules = await Schedule.find().populate({ path: 'studentId', select: 'name' })
     return schedules;
   } catch (error) {
     throw new Error("Error al buscar todas las citas" + error.message);
