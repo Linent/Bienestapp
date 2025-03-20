@@ -22,7 +22,7 @@ exports.createCareer = async (req, res) => {
 exports.getAllCareers = async (req, res) => {
   try {
     const careers = await careerService.getAllCareers();
-    res.status(200).json(careers);
+    res.status(200).send(careers);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }

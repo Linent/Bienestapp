@@ -33,6 +33,7 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    if(!email|| !password) return handlerError(res,400,errorsConstants.inputRequired);
     const userData = await loginUser(email, password);
 
     if (!userData) return handlerError(res, 401, errorsConstants.unauthorized);

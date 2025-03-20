@@ -26,9 +26,10 @@ exports.getSchedules = async () => {
       .populate({
         path: "AdvisoryId",
         select: "subjectId dateStart status",
-        populate: { path: "advisorId ", select: "name" },
+        populate: { path: "AdvisorId ", select: "name" },
         populate: {
-          path: "career", select: "name"
+          path: "career",
+          select: "name",
         },
       });
     return schedules;

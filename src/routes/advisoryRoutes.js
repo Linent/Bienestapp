@@ -20,4 +20,8 @@ router.get("/report/mostActiveAdvisor", Auth, advisoryController.getMostActiveAd
 router.get("/reports/yearly", Auth,advisoryController.getAdvisoryReportByYear); // Reporte por año
 
 router.get("/report/top-careers", Auth, advisoryController.getTopCareersReport);
+
+
+
+
 module.exports = router;

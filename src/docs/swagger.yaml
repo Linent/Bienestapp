@@ -25,6 +25,8 @@ tags:
     description: Rutas de usuarios
   - name: Advisory
     description: Rutas de asesorías
+  - name: Schedule
+    description: Rutas de agendamiento de asesorías
 security:
   - ApiKeyAuth: []
 paths:
@@ -64,7 +66,30 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Juan Pérez"
+                email:
+                  type: string
+                  example: "juan.perez@example.com"
+                password:
+                  type: string
+                  format: password
+                  example: "123456"
+                role:
+                  type: string
+                  enum: ["student", "professor"]
+                  example: "student"
+                career:
+                  type: string
+                  description: "ID de la carrera a la que pertenece"
+                  example: "67d3b319b244114e7e12ef17"
+                codigo:
+                  type: string
+                  description: "Código del estudiante o profesor"
+                  example: "1151756"
       responses:
         "201":
           description: Usuario registrado con éxito
@@ -123,7 +148,25 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/advisory'
+              type: object
+              properties:
+                advisorId:
+                  type: string
+                  description: ID del asesor asignado
+                  example: 123
+                careerId:
+                  type: string
+                  description: ID de la materia
+                  example: 456
+                dateStart:
+                  type: string
+                  format: date-time
+                  description: Fecha y hora de inicio
+                status:
+                  type: string
+                  enum: [pending, approved, completed, canceled]
+                  description: Estado de la asesoría
+                  example: pending
       responses:
         '201':
           description: Asesoría creada exitosamente
@@ -195,125 +238,7 @@ paths:
           description: Asesoría eliminada correctamente
         '404':
           description: Asesoría no encontrada
-  /subjects:
-    get:
-      summary: Obtener todas las materias
-      description: Retorna una lista de todas las materias disponibles en el sistema.
-      tags:
-        - Subjects
-      responses:
-        "200":
-          description: Lista de materias obtenida exitosamente.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Subject"
-  /subjects/create:
-    post:
-      summary: Crear una nueva materia
-      description: Crea una nueva materia en la base de datos.
-      tags:
-        - Subjects
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SubjectInput"
-      responses:
-        "201":
-          description: Materia creada exitosamente.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subject"
-        "400":
-          description: Error en la solicitud.
-
-  /subjects/{id}:
-    get:
-      summary: Obtener una materia por ID
-      description: Retorna los detalles de una materia específica según su ID.
-      tags:
-        - Subjects
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: ID de la materia
-      responses:
-        "200":
-          description: Materia encontrada.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subject"
-        "404":
-          description: Materia no encontrada.
-
-    put:
-      summary: Actualizar una materia
-      description: Modifica los datos de una materia existente.
-      tags:
-        - Subjects
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: ID de la materia
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SubjectInput"
-      responses:
-        "200":
-          description: Materia actualizada exitosamente.
-        "400":
-          description: Error en la solicitud.
-        "404":
-          description: Materia no encontrada.
-
-    delete:
-      summary: Eliminar una materia
-      description: Elimina una materia de la base de datos.
-      tags:
-        - Subjects
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: ID de la materia
-      responses:
-        "200":
-          description: Materia eliminada exitosamente.
-        "404":
-          description: Materia no encontrada.
-  /schedules:
-    get:
-      summary: Obtener todas las asistencias agendadas
-      tags:
-        - Schedule
-      security:
-        - BearerAuth: []
-      responses:
-        200:
-          description: Lista de asistencias agendadas obtenida exitosamente
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Schedule'
+ 
   /schedules/create:
     post:
       summary: Crear un nuevo registro de asistencia agendada
@@ -324,11 +249,11 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Schedule'
             example:
               "studentId": "67d4df03e1711993d1edd37b"
               "topic": "Introducción a la Programación"
               "advisoryId": "67d8d485dc4bf243ae06a1fc"
+              "status": "pending"
       responses:
         201:
           description: Registro de asistencia agendada creado exitosamente
@@ -390,12 +315,6 @@ paths:
       responses:
         "200":
           description: Informe de asesorías agrupadas por día
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AdvisoryReport"
 
   /advisory/report/last30days:
     get:
@@ -405,12 +324,7 @@ paths:
       responses:
         "200":
           description: Informe de asesorías agrupadas por día
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AdvisoryReport"
+          
 
   /advisory/report/lastyear:
     get:
@@ -420,12 +334,7 @@ paths:
       responses:
         "200":
           description: Informe de asesorías agrupadas por mes
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AdvisoryReport"
+
 
   /advisory/report/bydaterange:
     get:
@@ -450,12 +359,6 @@ paths:
       responses:
         "200":
           description: Informe de asesorías dentro del rango de fechas
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AdvisoryReport"
 
   /advisory/report/mostActiveAdvisor:
     get:
@@ -483,12 +386,7 @@ paths:
       responses:
         "200":
           description: Reporte de asesorías anuales
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AdvisoryReport"
+
   /advisory/report/top-careers:
     get:
       summary: Obtener las 5 carreras con más asesorías
@@ -515,79 +413,8 @@ components:
           type: string
           example: "115"
 
-    User:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "Juan Pérez"
-        email:
-          type: string
-          example: "juan.perez@example.com"
-        password:
-          type: string
-          format: password
-          example: "123456"
-        role:
-          type: string
-          enum: ["student", "professor"]
-          example: "student"
-        career:
-          type: string
-          description: "ID de la carrera a la que pertenece"
-          example: "67d3b319b244114e7e12ef17"
-        codigo:
-          type: string
-          description: "Código del estudiante o profesor"
-          example: "1151756"
-    Login:
-      type: object
-      properties:
-        email:
-          type: string
-          example: "juan.perez@example.com"
-        password:
-          type: string
-          format: password
-          example: "123456"
     advisory:
-      type: object
-      properties:
-        advisorId:
-          type: string
-          description: ID del asesor asignado
-          example: 123
-        careerId:
-          type: string
-          description: ID de la materia
-          example: 456
-        dateStart:
-          type: string
-          format: date-time
-          description: Fecha y hora de inicio
-        status:
-          type: string
-          enum: [pending, approved, completed, canceled]
-          description: Estado de la asesoría
-          example: pending
-    Advisory:
-      type: object
-      properties:
-        id:
-          type: string
-        advisorId:
-          type: string
-        careerId:
-          type: string
-        dateStart:
-          type: string
-          format: date-time
-        dateEnd:
-          type: string
-          format: date-time
-        status:
-          type: string
-          enum: [pending, approved, completed, canceled]
+
 
     SubjectInput:
       type: object
@@ -651,18 +478,7 @@ components:
           type: string
           description: Carrera relacionada con la asesoría
           example: "Ingeniería Mecánica"
-    AdvisoryReport:
-      type: object
-      properties:
-        year:
-          type: integer
-        month:
-          type: integer
-        week:
-          type: integer
-        totalAdvisories:
-          type: integer
-    AdvisoryReport:
+
       type: object
       properties:
         _id:
@@ -732,45 +548,3 @@ components:
       example:
         name: "Matemáticas Discretas"
         careerCode: "60f7b1234c8e2f001c9a3b45"
-    Schedule:
-      type: object
-      properties:
-        studentId:
-          type: string
-          description: ID del estudiante
-          example: 67d4df03e1711993d1edd37b
-        advisoryId:
-          type: string
-          description: ID de la asesoría relacionada
-          example:
-        topic:
-          type: string
-          description: Tema específico de la asesoría
-          example: conjuntos
-        attendance:
-          type: boolean
-          description: Indica si el estudiante asistió o no
-          example: false
-        status:
-          type: string
-          enum: [pending, approved, completed, canceled]
-          description: Estado de la asistencia agendada
-      type: object
-      properties:
-        date:
-          type: string
-          format: date
-          example: "2025-03-01"
-        totalAdvisories:
-          type: integer
-          example: 15
-
-    careerReport:
-      type: object
-      properties:
-        career:
-          type: string
-          example: "Ingeniería de Sistemas"
-        totalAdvisories:
-          type: integer
-          example: 40

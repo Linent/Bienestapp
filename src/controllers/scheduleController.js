@@ -5,6 +5,12 @@ const ScheduleService = require("../services/scheduleService");
 // Crear un nuevo registro en el horario (schedule)
 const createSchedule = async (req, res) => {
   try {
+    const usersValid = ["admin"];
+
+    if (!usersValid.includes(req.user.role)) {
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
+
     const { studentId, topic, advisoryId } = req.body;
     if (!studentId || !topic || !advisoryId) {
       return handlerError(res, 400, errorsConstants.inputRequired);
@@ -28,9 +34,10 @@ const getSchedules = async (req, res) => {
     //!TODO on anothers controllers
     const usersValid = ["academic_friend", "admin"];
     console.log(req.user.role);
-    if (!usersValid.includes(req.user.role))
+    if (!usersValid.includes(req.user.role)){
       return handlerError(res, 403, errorsConstants.unauthorized);
-    
+    }
+
     const allSchedules = await ScheduleService.getSchedules();
     return res.status(200).send(allSchedules);
   } catch (error) {
@@ -55,12 +62,12 @@ const getScheduleById = async (req, res) => {
 };
 
 // Actualizar el estado de asistencia
-const updateSchedule = async (req, res) => {  
+const updateSchedule = async (req, res) => {
   try {
     //?example how to valid by role
     //!TODO on anothers controllers
     const usersValid = ["academic_friend", "admin"];
-  
+
     if (!usersValid.includes(req.user.role))
       return handlerError(res, 403, errorsConstants.unauthorized);
 

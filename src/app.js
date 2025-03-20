@@ -6,7 +6,6 @@ const morgan = require("morgan");
 const careerRouter = require("./routes/careerRoutes.js");
 const advisoryRouter = require("./routes/advisoryRoutes.js");
 const userRouter = require("./routes/userRoutes.js");
-const subjectRouter = require("./routes/subjectRoutes.js");
 const scheduleRouter = require('./routes/scheduleRoutes.js');
 import whatsappRoutes from "./routes/whatsappRoutes.js";
 //
@@ -23,7 +22,7 @@ app.use('/career',careerRouter);
 app.use('/schedules', scheduleRouter);
 app.use('/advisory',advisoryRouter)
 app.use('/user',userRouter);
-app.use('/subjects',subjectRouter);
+
 
 
 if (config.NODE_ENV !== 'production') {
