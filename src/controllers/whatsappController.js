@@ -1,6 +1,6 @@
 import { errorsConstants } from "../constants/errors.constant.js"
 import config from "../config/config.js";
-const handlerError = require("../handlers/errors.handlers");
+const { handlerError } = require("../handlers/errors.handlers");
 
 import { sendMessage } from "../services/whatsappService.js";
 class WhatsappController {

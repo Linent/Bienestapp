@@ -1,6 +1,6 @@
 const SubjectService = require("../services/subjectService");
-const handlerError = require("../handlers/errors.handlers");
-const errorsConstants = require("../constants/errors.constant");
+const { handlerError } = require("../handlers/errors.handlers");
+const { errorsConstants } = require("../constants/errors.constant");
 const subjectController = require("../services/subjectService");
 
 const create = async (req, res) => {

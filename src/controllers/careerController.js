@@ -1,6 +1,6 @@
 const careerService = require("../services/CareerService");
 const { handlerError } = require("../handlers/errors.handlers");
-const errorsConstants = require("../constants/errors.constant");
+const { errorsConstants } = require("../constants/errors.constant");
 
 exports.createCareer = async (req, res) => {
   try {

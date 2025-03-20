@@ -1,7 +1,7 @@
 const User = require("../models/User");
 const { loginUser, registerUser } = require("../services/userService");
 const { handlerError } = require("../handlers/errors.handlers");
-const errorsConstants = require("../constants/errors.constant");
+const { errorsConstants } = require("../constants/errors.constant");
 const jwt = require("jsonwebtoken");
 
 exports.register = async (req, res) => {

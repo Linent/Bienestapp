@@ -1,6 +1,6 @@
 const AdvisoryService = require("../services/advisoryService");
 const { handlerError } = require("../handlers/errors.handlers");
-const errorsConstants = require("../constants/errors.constant");
+const { errorsConstants } = require("../constants/errors.constant");
 
 const createAdvisory = async (req, res) => {
   try {

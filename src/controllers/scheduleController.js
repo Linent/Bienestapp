@@ -24,6 +24,13 @@ const createSchedule = async (req, res) => {
 // Obtener todos los registros de horarios
 const getSchedules = async (req, res) => {
   try {
+    //?example how to valid by role
+    //!TODO on anothers controllers
+    const usersValid = ["academic_friend", "admin"];
+    console.log(req.user.role);
+    if (!usersValid.includes(req.user.role))
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    
     const allSchedules = await ScheduleService.getSchedules();
     return res.status(200).send(allSchedules);
   } catch (error) {
@@ -48,15 +55,15 @@ const getScheduleById = async (req, res) => {
 };
 
 // Actualizar el estado de asistencia
-const updateSchedule = async (req, res) => {
-  //?example how to valid by role
-  //!TODO on anothers controllers
-  const usersValid = ["academic_friend", "admin"];
-
-  if (!usersValid.includes(req.user.role))
-    return res.status(403).json({ message: "User not autorized" });
-
+const updateSchedule = async (req, res) => {  
   try {
+    //?example how to valid by role
+    //!TODO on anothers controllers
+    const usersValid = ["academic_friend", "admin"];
+  
+    if (!usersValid.includes(req.user.role))
+      return handlerError(res, 403, errorsConstants.unauthorized);
+
     let dataToUpdate = {
       updateAt: new Date(),
       ...req.body,
