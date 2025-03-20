@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
+const { handlerError } = require("../handlers/errors.handlers");
+const errorsConstants = require("../constants/errors.constant");
 
 class JwtService {
   constructor() {

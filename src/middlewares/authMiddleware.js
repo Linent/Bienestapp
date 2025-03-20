@@ -1,15 +1,13 @@
 const JwtService = require("../services/jwt");
 
 const Auth = (req, res, next) => {
-     const jwtService = new JwtService();
-    const response = jwtService.decodeToken(req);
+  const jwtService = new JwtService();
+  const response = jwtService.decodeToken(req, res);
 
-    if (!response.success) {
-        return res.status(response.status).send({ errors: response.message });
-    }
-
+  if (response.success) {
     req.user = response.payload;
-    next(); 
+    next();
+  }
 };
 
 module.exports = Auth;
