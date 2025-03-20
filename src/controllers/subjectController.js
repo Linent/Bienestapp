@@ -1,6 +1,6 @@
 const SubjectService = require("../services/subjectService");
 const handlerError = require("../handlers/errors.handlers");
-const errorsConstants = require("../constants/errors.constant");
+const { errorsConstants } = require("../constants/errors.constant");
 const subjectController = require("../services/subjectService");
 
 const create = async (req, res) => {
@@ -65,7 +65,7 @@ const deleteSub = async (req, res) => {
     const subjectId = req.params.id;
     const subject = await subjectController.deleteSubject(subjectId);
     if (!subject) {
-      return res.status(404).json({ message: "Materia no encontrada" });
+      return res.status(404).send({ message: "Materia no encontrada" });
     }
     res.status(200).send({ succes: true });
   } catch (error) {

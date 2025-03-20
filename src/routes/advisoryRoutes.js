@@ -1,23 +1,28 @@
 const express = require("express");
 const router = express.Router();
-const advisoryController = require('../controllers/advisoryController')
+const advisoryController = require("../controllers/advisoryController");
+const Auth = require("../middlewares/authMiddleware");
 
-router.post('/create', advisoryController.createAdvisory);
-router.get('/', advisoryController.getAllAdvisories);
-router.get("/:advisoryId", advisoryController.getAdvisoryById);
-router.put("/:advisoryId", advisoryController.updateAdvisory);
-router.delete("/:advisoryId", advisoryController.deleteAdvisory);
+router.post("/create", Auth, advisoryController.createAdvisory);
+router.get("/", Auth, advisoryController.getAllAdvisories);
+router.get("/:advisoryId", Auth, advisoryController.getAdvisoryById);
+router.put("/:advisoryId", Auth, advisoryController.updateAdvisory);
+router.delete("/:advisoryId", Auth, advisoryController.deleteAdvisory);
+
 
 
 // Rutas para reportes
 //router.get("/reports/weekly", advisoryController.getAdvisoryReportByWeek); // Reporte por semana
 //router.get("/reports/monthly", advisoryController.getAdvisoryReportByMonth); // Reporte por mes
-router.get("/report/last7days", advisoryController.getAdvisoryReportLast7Days);
-router.get("/report/last30days", advisoryController.getAdvisoryReportLast30Days);
-router.get("/report/lastyear", advisoryController.getAdvisoryReportLastYear);
-router.get("/report/bydaterange", advisoryController.getAdvisoryReportByDateRange);
-router.get("/report/mostActiveAdvisor", advisoryController.getMostActiveAdvisor);
-router.get("/reports/yearly", advisoryController.getAdvisoryReportByYear); // Reporte por año
+router.get("/report/last7days", Auth,advisoryController.getAdvisoryReportLast7Days);
+router.get("/report/last30days", Auth,advisoryController.getAdvisoryReportLast30Days);
+router.get("/report/lastyear", Auth,advisoryController.getAdvisoryReportLastYear);
+router.get("/report/bydaterange", Auth,advisoryController.getAdvisoryReportByDateRange);
+router.get("/report/mostActiveAdvisor", Auth,advisoryController.getMostActiveAdvisor);
+router.get("/reports/yearly", Auth,advisoryController.getAdvisoryReportByYear); // Reporte por año
+router.get("/report/top-careers", Auth, advisoryController.getTopCareersReport);
 
-router.get("/report/top-careers", advisoryController.getTopCareersReport);
+
+
+
 module.exports = router;

@@ -1,6 +1,6 @@
 const AdvisoryService = require("../services/advisoryService");
 const { handlerError } = require("../handlers/errors.handlers");
-const errorsConstants = require("../constants/errors.constant");
+const { errorsConstants } = require("../constants/errors.constant");
 
 const createAdvisory = async (req, res) => {
   try {
@@ -115,7 +115,7 @@ const getAdvisoryReportByYear = async (req, res) => {
   try {
     const { year } = req.query; // Obtener el año desde los parámetros de consulta
     if (!year) {
-      return res.status(400).json({ message: "El año es obligatorio" });
+      return res.status(400).send({ message: "El año es obligatorio" });
     }
     const report = await AdvisoryService.getReportByYear(parseInt(year));
     return res.status(200).send(report);
@@ -158,7 +158,7 @@ const getAdvisoryReportByDateRange = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     if (!startDate || !endDate) {
-      return res.status(400).json({ message: "Las fechas de inicio y fin son obligatorias" });
+      return res.status(400).send({ message: "Las fechas de inicio y fin son obligatorias" });
     }
     const report = await AdvisoryService.getReportByDateRange(startDate, endDate);
     return res.status(200).send(report);
@@ -171,7 +171,7 @@ const getAdvisoryReportByDateRange = async (req, res) => {
 const getMostActiveAdvisor = async (req, res) => {
   try {
     const report = await AdvisoryService.getMostActiveAdvisor();
-    res.status(200).json(report);
+    res.status(200).send(report);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
