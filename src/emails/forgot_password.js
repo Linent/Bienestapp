@@ -115,13 +115,12 @@ export default (user, hash) => `
               style="color: white"
               href="https://congeniusms.com/recovery-password/${ hash } target="
               _blank
-              >Cambiar Contraseña</a
-            >
+              >Cambiar Contraseña</a>
           </p>
           <!-- Gracias -->
           <p>Gracias por tu tiempo.</p>
           <p style="margin-bottom: 50px">
-            <b><i>Atentamente: </i>Equipo de Congeniusms.com</b>
+            <b><i>Atentamente: </i>Equipo de Bienestar universitario</b>
           </p>
           <p>
             Si no Solicitaste restablecer tu contraseña, por favor ignora este
