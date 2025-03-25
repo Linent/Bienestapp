@@ -131,6 +131,14 @@ paths:
           description: Credenciales inválidas
         "500":
           description: Error interno del servidor
+  /user/mail:
+    get:
+      summary: mail de prueba
+      tags:
+        - Users
+      responses:
+        "200":
+          description: se envio el email
   /advisory:
     get:
       summary: Obtener todas las asesorías
@@ -401,3 +409,41 @@ paths:
       responses:
         "200":
           description: Retorna las carreras con más asesorías
+  /user/send-email:
+    post:
+      summary: Enviar un correo a un usuario
+      description: Envía un correo electrónico de bienvenida a un usuario registrado.
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  description: ID del usuario al que se enviará el correo.
+                  example: "67d4df40e1711993d1edd37f"
+      responses:
+        "200":
+          description: Correo enviado exitosamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Correo enviado"
+        "400":
+          description: Error en la solicitud (usuario no encontrado o error en el envío).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Usuario no encontrado"

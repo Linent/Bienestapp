@@ -68,3 +68,16 @@ exports.deleteSchedule = async (scheduleId) => {
     throw new Error("Error al eliminar reservación" + error.message);
   }
 };
+
+exports.updateAttendance = async (scheduleId, attendanceStatus) => {
+  const schedule = await Schedule.findById(scheduleId);
+  if (!schedule) {
+      throw new Error(errorsConstants.notFound);
+  }
+
+  schedule.attendance = attendanceStatus;
+  schedule.status = attendanceStatus ? 'completed' : 'pending';
+  await schedule.save();
+
+  return schedule;
+};

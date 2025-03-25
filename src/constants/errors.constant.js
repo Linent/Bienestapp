@@ -17,4 +17,6 @@ export const errorsConstants = {
     subjectNotExist: 'Subject.not.exists',
     subjectNotUpdate:'Subject.not.update',
     advisoryNotUpdate: 'Advisory.not.update',
+    userUpdated: 'User.updated.successfully',
+    userDisabled: 'User.disabled.successfully'
   };

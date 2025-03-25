@@ -107,10 +107,21 @@ const deleteSchedule = async (req, res) => {
   }
 };
 
+const updateAttendance = async (req, res) => {
+  try {
+      const { scheduleId, attendanceStatus } = req.body;
+      const schedule = await ScheduleService.updateAttendance(scheduleId, attendanceStatus);
+      return res.status(200).send(schedule);
+  } catch (error) {
+      return handlerError(res, 400, error.message);
+  }
+};
+
 module.exports = {
   createSchedule,
   getSchedules,
   getScheduleById,
   updateSchedule,
   deleteSchedule,
+  updateAttendance
 };

@@ -1,7 +1,10 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const JwtService = require("./jwt");
-const { handlerError } = require("../handlers/errors.handlers");
+
+const EmailService = require("../config/emailConfig");
+
+
 
 exports.registerUser = async (name, email, password, role, career, codigo) => {
   try {
@@ -20,7 +23,9 @@ exports.registerUser = async (name, email, password, role, career, codigo) => {
       codigo,
     });
     const createUser = await newUser.save();
-
+     const userId = String(createUser._id);
+    const probando = await exports.sendWelcomeEmail(userId);
+    console.log(probando);
     return createUser;
   } catch (error) {
     console.log(error);
@@ -43,3 +48,48 @@ exports.loginUser = async (email, password) => {
 
   return { user, token };
 };
+
+exports.getAllUsers = async () => {
+  return await User.find();
+};
+
+exports.getUserById = async (id) => {
+  return await User.findById(id);
+};
+
+exports.updateUser = async (id, data) => {
+  return await User.findByIdAndUpdate(id, data, { new: true });
+};
+
+exports.disableUser = async (id) => {
+  return await User.findByIdAndUpdate(id, { enable: false }, { new: true });
+};
+
+exports.sendWelcomeEmail = async (userId) => {
+try{
+
+    const user = await User.findById(userId);
+  if (!user) {
+      throw new Error("Usuario no encontrado");
+  }
+  const subject = "Bienvenido a la Plataforma de Asesorías";
+  const text = `Hola ${user.name}, bienvenido a nuestra plataforma.`;
+  const html = `<h1>Hola ${user.name}</h1><p>Bienvenido a nuestra plataforma.</p>`;
+ 
+  const Succesmail = await EmailService.sendEmail(user.email, subject, text, html);
+  return { message: "Correo enviado" };
+}catch(error){
+  return { message: 'error: '+error };
+}
+};
+
+exports.sendPruebas = async () => {
+  try{
+    console.log('llega acá');
+  const pruebasSucces = await mailConfig.pruebaEmail();
+  return pruebasSucces 
+}
+  catch(error){
+    console.log(error);
+  }
+}

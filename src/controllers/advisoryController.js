@@ -4,26 +4,25 @@ const { errorsConstants } = require("../constants/errors.constant");
 
 const createAdvisory = async (req, res) => {
   try {
-    const { advisorId, careerId, dateStart, status } = req.body;
+    const { advisorId, careerId, dateStart, dateEnd, day, status } = req.body;
 
     if (
       !advisorId ||
       !careerId ||
       !dateStart ||
-      !status
+      !dateEnd||
+      !day
     ) {
       return handlerError(res, 404, errorsConstants.inputRequired);
     }
     
-    // Calcular dateEnd sumando 2 horas a dateStart
-    const dateEnd = new Date(dateStart);
-    dateEnd.setHours(dateEnd.getHours() + 4);
-    
+     
     const advisory = await AdvisoryService.createAdvisory(
       advisorId,
       careerId,
       dateStart,
       dateEnd,
+      day,
       status
     );
     return res.status(201).send(advisory);
@@ -86,30 +85,7 @@ const deleteAdvisory = async (req, res) => {
   }
 };
 
-/* // Reporte por semana
-const getAdvisoryReportByWeek = async (req, res) => {
-  try {
-    const report = await AdvisoryService.getReportByWeek();
-    res.status(200).send(report);
-  } catch (error) {
-    return handlerError(res, 500, errorsConstants.serverError);
-    }
-};
 
-// Reporte por mes
-const getAdvisoryReportByMonth = async (req, res) => {
-  try {
-    const { year } = req.query; // Obtener el año desde los parámetros de consulta
-    if (!year) {
-      return res.status(400).send({ message: "El año es obligatorio" });
-    }
-    const report = await AdvisoryService.getReportByMonth(parseInt(year));
-    res.status(200).json(report);
-  } catch (error) {    
-    return handlerError(res, 500, errorsConstants.serverError);
-  }
-};
-*/
 // Reporte por año
 const getAdvisoryReportByYear = async (req, res) => {
   try {
@@ -201,7 +177,3 @@ module.exports = {
   getMostActiveAdvisor,
   getTopCareersReport
 };
-/*
-getAdvisoryReportByWeek,
-getAdvisoryReportByMonth,
-*/

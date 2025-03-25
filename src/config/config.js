@@ -16,5 +16,11 @@ module.exports = {
     API_TOKEN: process.env.API_TOKEN || "",
     BUSINESS_PHONE: process.env.BUSINESS_PHONE || "",
     API_VERSION: process.env.API_VERSION || "v22.0",
+
+    //
+    EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ,
+    EMAIL: process.env.EMAIL_USER,
+    EMAIL_SMTP: process.env.EMAIL_SMTP,
+    EMAIL_PORT: process.env.EMAIL_PORT
 };
 

@@ -1,19 +1,33 @@
 const Advisory = require("../models/Advisory");
 const { handlerError } = require("../handlers/errors.handlers");
+const { errorsConstants } = require("../constants/errors.constant");
 
 
 class AdvisoryService {
-  async createAdvisory(advisorId, careerId, dateStart, dateEnd, status) {
+  async createAdvisory(advisorId, careerId, dateStart, dateEnd, day, status = "pending") {
     try {
-      const newAdvisory = new Advisory({
-        advisorId,
-        careerId,
-        dateStart,
-        dateEnd,
-        status,
-      });
-      const registerAdvisory = await newAdvisory.save();
-      return registerAdvisory;
+      const advisor = await User.findById(advisorId);
+      if (!advisor || advisor.role !== 'academic_friend') {
+          throw new Error(errorsConstants.unauthorized);
+      }
+        // Calcular duración en horas de la asesoría
+      const start = new Date(dateStart);
+      const end = new Date(dateEnd);
+      const durationHours = (end - start) / (1000 * 60 * 60); // Convertir ms a horas
+      console.log(durationHours);
+      if (advisor.availableHours < durationHours) {
+          throw new Error("El asesor no tiene suficientes horas disponibles.");
+      }
+  
+      // Crear la asesoría con el estado definido
+      const advisory = new Advisory({ advisorId, careerId, dateStart, dateEnd, day, status });
+      await advisory.save();
+  
+      // Restar las horas de disponibilidad del asesor
+      advisor.availableHours -= durationHours;
+      await advisor.save();
+  
+      return advisory;
     } catch (error) {
       throw handlerError("Error in createAdvisory: " + error.message);
     }
