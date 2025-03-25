@@ -1,8 +1,9 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const JwtService = require("./jwt");
-
+const welcomeTemplate   = require('../emails/welcome_user')
 const EmailService = require("../config/emailConfig");
+const { errorsConstants } = require("../constants/errors.constant");
 
 
 
@@ -67,14 +68,17 @@ exports.disableUser = async (id) => {
 
 exports.sendWelcomeEmail = async (userId) => {
 try{
-
+    if(!userId){
+      throw new Error(errorsConstants.inputIdRequired);
+    }
     const user = await User.findById(userId);
   if (!user) {
       throw new Error("Usuario no encontrado");
   }
+  
   const subject = "Bienvenido a la Plataforma de Asesorías";
   const text = `Hola ${user.name}, bienvenido a nuestra plataforma.`;
-  const html = `<h1>Hola ${user.name}</h1><p>Bienvenido a nuestra plataforma.</p>`;
+  const html = welcomeTemplate(user)
  
   const Succesmail = await EmailService.sendEmail(user.email, subject, text, html);
   return { message: "Correo enviado" };
@@ -86,7 +90,7 @@ try{
 exports.sendPruebas = async () => {
   try{
     console.log('llega acá');
-  const pruebasSucces = await mailConfig.pruebaEmail();
+  const pruebasSucces = await EmailService.pruebaEmail();
   return pruebasSucces 
 }
   catch(error){

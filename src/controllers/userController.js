@@ -93,7 +93,7 @@ exports.disableUser = async (req, res) => {
 exports.sendWelcomeEmail = async (req, res) => {
   try {
     const { userId } = req.body;
-  
+
     const result = await userService.sendWelcomeEmail(userId);
     return res.status(200).send(result);
   } catch (error) {
@@ -102,9 +102,16 @@ exports.sendWelcomeEmail = async (req, res) => {
 };
 exports.sendPruebas = async () => {
   try {
-    console.log("mpl mierdaaaaa");
     const pruebaExitosa = await userService.sendPruebas();
     return res.status(200).send({ pruebaExitosa });
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+exports.forgotPassword = async () => {
+  try {
+    //const forgotPass = await 
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }

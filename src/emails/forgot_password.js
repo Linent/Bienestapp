@@ -1,4 +1,5 @@
-export default (user, hash) => `
+let year = new Date().getFullYear();
+module.exports = (user, hash) => `
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -105,7 +106,7 @@ export default (user, hash) => `
         >
           <h1>Recuperar Contraseña</h1>
           <h4>
-            Hola ${ user.name }, En el siguiente botón puedes cambiar tu
+            Hola ${user.name}, En el siguiente botón puedes cambiar tu
             contraseña.
           </h4>
           <p>
@@ -113,7 +114,7 @@ export default (user, hash) => `
             <a
               class="claseBoton"
               style="color: white"
-              href="https://congeniusms.com/recovery-password/${ hash } target="
+              href="https://congeniusms.com/recovery-password/${hash} target="
               _blank
               >Cambiar Contraseña</a>
           </p>
@@ -148,7 +149,7 @@ export default (user, hash) => `
               font-size: 14px !important;
             "
           >
-            © 2025 Bienestar universitario, todos los derechos reservados.
+            © ${year} Bienestar Universitario UFPS, todos los derechos reservados.
           </p>
         </div>
         <!-- Footer -->
@@ -156,4 +157,4 @@ export default (user, hash) => `
     </div>
   </body>
 </html>
-`
+`;
