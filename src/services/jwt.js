@@ -27,7 +27,6 @@ class JwtService {
   decodeToken(req, res) {
     try {
       const token = req.header("Authorization")?.replace("Bearer ", "");
-      console.log(token);
       if (!token) {
         return handlerError(res, 401, errorsConstants.haventToken);
       }

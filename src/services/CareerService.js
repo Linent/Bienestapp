@@ -8,7 +8,6 @@ exports.createCareer = async (name, code) => {
 
     return newCareer;
   } catch (error) {
-    console.log(error);
     throw handlerError("Error in createCareer: " + error.message);
   }
 };

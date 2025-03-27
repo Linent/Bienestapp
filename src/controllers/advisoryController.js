@@ -43,7 +43,7 @@ const getAllAdvisories = async (req, res) => {
 const getAdvisoryById = async (req, res) => {
   try {
     const { advisoryId } = req.params;
-    console.log(advisoryId);
+    
     if (!advisoryId) {
       return handlerError(res, 404, errorsConstants.inputIdRequired);
     }

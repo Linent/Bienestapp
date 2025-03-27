@@ -33,7 +33,7 @@ const getSchedules = async (req, res) => {
     //?example how to valid by role
     //!TODO on anothers controllers
     const usersValid = ["academic_friend", "admin"];
-    console.log(req.user.role);
+
     if (!usersValid.includes(req.user.role)){
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
@@ -49,7 +49,7 @@ const getSchedules = async (req, res) => {
 const getScheduleById = async (req, res) => {
   try {
     const { scheduleId } = req.params;
-    console.log(scheduleId);
+
     if (!scheduleId) {
       return handlerError(res, 400, errorsConstants.inputIdRequired);
     }

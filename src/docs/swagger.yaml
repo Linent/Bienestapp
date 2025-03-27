@@ -131,6 +131,64 @@ paths:
           description: Credenciales inválidas
         "500":
           description: Error interno del servidor
+  /user:
+    get:
+      summary: Obtener todos los usuarios
+      tags:
+        - Users
+      responses:
+        '200':
+          description: Lista de todos los usuarios
+  /user/{userId}:
+    get:
+      summary: obtener un usuario por ID
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: se obtendra los datos con sus datos
+    post:
+      summary: modificar datos de un usuario
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example:
+                email:
+                  type: string
+                  example:
+                codigo:
+                  type: string
+                  example:
+                password:
+                  type: string
+                  example:
+                role:
+                  type: string
+                  example: 'student'
+      responses:
+        '200':
+          description: datos del usuario actualizado correctamente                   
+
   /user/mail:
     get:
       summary: mail de prueba
@@ -236,7 +294,6 @@ paths:
                   enum: [pending, confirmed, completed, canceled]
                   description: Estado actualizado de la asesoría
                   example: pending
-
       responses:
         '200':
           description: Asesoría actualizada correctamente
@@ -453,6 +510,28 @@ paths:
                 properties:
                   error:
                     type: string
+    post:
+      tags:
+        - Users
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  description: contraseña que se cambiara
+                  example: 123456789
+      responses:
+        "200":
+          description: Correo enviado exitosamente.
                     example: "Usuario no encontrado"
                     
   /user/forgot-password:

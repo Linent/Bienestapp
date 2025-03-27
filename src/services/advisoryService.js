@@ -209,7 +209,7 @@ async getMostActiveAdvisor () {
         }
       }
     ]);
-    console.log(result);
+
     return result.length > 0 ? result[0] : { message: "No se encontraron asesorías." };
   } catch (error) {
     throw new Error("Error al obtener el asesor más activo: " + error.message);

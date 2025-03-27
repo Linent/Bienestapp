@@ -27,7 +27,6 @@ exports.register = async (req, res) => {
     
     return res.status(201).send(userSucces);
   } catch (error) {
-    console.log(error);
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
@@ -58,7 +57,8 @@ exports.getAllUsers = async (req, res) => {
 
 exports.getUserById = async (req, res) => {
   try {
-    const user = await userService.getUserById(req.params.id);
+    const { userId } = req.params
+    const user = await userService.getUserById(userId);
     if (!user) return handlerError(res, 400, errorsConstants.userNotFound);
     res.send(user);
   } catch (error) {
@@ -68,7 +68,7 @@ exports.getUserById = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
-    const userId = req.params.id;
+    const userId = req.params;
     const body = req.body;
     const updatedUser = await userService.updateUser(userId, body);
     if (!updatedUser)
@@ -101,14 +101,14 @@ exports.sendWelcomeEmail = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
-exports.sendPruebas = async () => {
+/* exports.sendPruebas = async () => {
   try {
     const pruebaExitosa = await userService.sendPruebas();
     return res.status(200).send({ pruebaExitosa });
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
-};
+}; */
 
 exports.forgotPassword = async (req, res) => {
   try {

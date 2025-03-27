@@ -29,7 +29,7 @@ exports.registerUser = async (name, email, password, role, career, codigo) => {
 
     return createUser;
   } catch (error) {
-    console.log(error);
+    throw new Error(error);
   }
 };
 
@@ -89,7 +89,6 @@ try{
 
 exports.sendPruebas = async () => {
   try{
-    console.log('llega acá');
   const pruebasSucces = await EmailService.pruebaEmail();
   return pruebasSucces 
 }
@@ -115,7 +114,6 @@ exports.forgotPassword = async (email) => {
 exports.recoveryPassword = async (userId, newPassword) => {
   try {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    console.log(userId, hashedPassword);
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { password: hashedPassword },
