@@ -2,7 +2,8 @@ const User = require("../models/User");
 const userService = require("../services/userService");
 const { handlerError } = require("../handlers/errors.handlers");
 const { errorsConstants } = require("../constants/errors.constant");
-const jwt = require("jsonwebtoken");
+const JwtService = require("../services/jwt");
+
 
 exports.register = async (req, res) => {
   try {
@@ -109,9 +110,42 @@ exports.sendPruebas = async () => {
   }
 };
 
-exports.forgotPassword = async () => {
+exports.forgotPassword = async (req, res) => {
   try {
-    //const forgotPass = await 
+      const { email } = req.body;
+
+      if (!email) { 
+        return handlerError(res, 400, errorsConstants.inputRequired);
+      }
+
+      const response = await userService.forgotPassword(email);
+      return res.status(200).send(response);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+exports.recoveryPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const { password } = req.body;
+
+    if (!password || password.length < 8) {
+      return res.status(400).send(errorsConstants.shortPassword);
+    }
+
+    const jwtService = new JwtService();
+    const decodedToken = jwtService.verifyToken(token); // Decodificar el token
+
+    if (!decodedToken || !decodedToken.payload.id) {
+      return res.status(401).send(errorsConstants.expiredToken);
+    }
+    const userId = decodedToken.payload.id
+
+    const response = await userService.recoveryPassword(userId, password);
+    return res.status(200).send(response);
+    
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }

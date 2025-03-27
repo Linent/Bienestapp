@@ -259,7 +259,14 @@ paths:
           description: Asesoría eliminada correctamente
         '404':
           description: Asesoría no encontrada
- 
+  /schedules:
+    get:
+      summary: obtener todos las asesorías
+      tags:
+        - Schedule
+      responses:
+        200:
+          description: Todas las asistencias registradas 
   /schedules/create:
     post:
       summary: Crear un nuevo registro de asistencia agendada
@@ -425,7 +432,7 @@ paths:
                 userId:
                   type: string
                   description: ID del usuario al que se enviará el correo.
-                  example: "67d4df40e1711993d1edd37f"
+                  example: "67d4df40e1711993d1edd37f"              
       responses:
         "200":
           description: Correo enviado exitosamente.
@@ -447,3 +454,47 @@ paths:
                   error:
                     type: string
                     example: "Usuario no encontrado"
+                    
+  /user/forgot-password:
+    post:
+      summary: Enviar un correo de recuperación de contraseña a un usuario
+      description: Envía un correo electrónico de bienvenida a un usuario registrado.
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: email del usuario al que se enviará el correo para recuperar contraseña.
+                  example: "ochoaanderson102@gmail.com"
+      responses:
+        "200":
+          description: Correo enviado exitosamente.
+  /user/recovery-password/{token}:
+    post:
+      tags:
+        - Users
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  description: contraseña que se cambiara
+                  example: 123456789
+      responses:
+        "200":
+          description: Correo enviado exitosamente.

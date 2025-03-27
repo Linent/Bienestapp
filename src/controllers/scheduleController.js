@@ -49,7 +49,7 @@ const getSchedules = async (req, res) => {
 const getScheduleById = async (req, res) => {
   try {
     const { scheduleId } = req.params;
-
+    console.log(scheduleId);
     if (!scheduleId) {
       return handlerError(res, 400, errorsConstants.inputIdRequired);
     }

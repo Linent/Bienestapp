@@ -26,7 +26,7 @@ exports.registerUser = async (name, email, password, role, career, codigo) => {
     const createUser = await newUser.save();
      const userId = String(createUser._id);
     const probando = await exports.sendWelcomeEmail(userId);
-    console.log(probando);
+
     return createUser;
   } catch (error) {
     console.log(error);
@@ -97,3 +97,37 @@ exports.sendPruebas = async () => {
     console.log(error);
   }
 }
+
+exports.forgotPassword = async (email) => {
+  try {
+      const user = await User.findOne({ email: email.toLowerCase().trim() });
+      if (!user) return { success: false, message: "Usuario no encontrado" };
+      const jwtService = new JwtService();
+      const hash = jwtService.generateToken({ id: user._id, role: user.role }); // Genera un token de recuperación
+      await EmailService.forgotPassword(user, hash); // Envía el email
+
+      return { success: true, message: "Correo de recuperación enviado" };
+  } catch (error) {
+      return { success: false, message: "Error al procesar la solicitud", error };
+  }
+};
+
+exports.recoveryPassword = async (userId, newPassword) => {
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log(userId, hashedPassword);
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { password: hashedPassword },
+      { new: true } // Retorna el usuario actualizado
+    );
+
+    if (!updatedUser) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    return { success: true, message: "Contraseña actualizada exitosamente" };
+  } catch (error) {
+    throw new Error(error.message || "Error al actualizar la contraseña");
+  }
+};

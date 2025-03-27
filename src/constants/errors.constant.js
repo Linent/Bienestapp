@@ -18,5 +18,6 @@ export const errorsConstants = {
     subjectNotUpdate:'Subject.not.update',
     advisoryNotUpdate: 'Advisory.not.update',
     userUpdated: 'User.updated.successfully',
-    userDisabled: 'User.disabled.successfully'
+    userDisabled: 'User.disabled.successfully',
+    shortPassword: 'password_is_short',
   };
