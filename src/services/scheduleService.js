@@ -81,3 +81,13 @@ exports.updateAttendance = async (scheduleId, attendanceStatus) => {
 
   return schedule;
 };
+
+exports.getSchedulesByStudent = async (studentId) => {
+  return await Schedule.find({ studentId }) // Filtra las asesorías del estudiante
+  .populate({ path: 'studentId', select: 'name email'})
+  .populate({
+    path: "AdvisoryId", select: 'advisorId careerId dateStart',
+    populate: { path: 'advisorId careerId', select: 'name day email' },
+  })
+  .sort({ createdAt: -1 }); // Ordena por fecha de creación (más recientes primero)
+};

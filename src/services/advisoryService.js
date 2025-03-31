@@ -2,31 +2,44 @@ const Advisory = require("../models/Advisory");
 const { handlerError } = require("../handlers/errors.handlers");
 const { errorsConstants } = require("../constants/errors.constant");
 
-
 class AdvisoryService {
-  async createAdvisory(advisorId, careerId, dateStart, dateEnd, day, status = "pending") {
+  async createAdvisory(
+    advisorId,
+    careerId,
+    dateStart,
+    dateEnd,
+    day,
+    status = "pending"
+  ) {
     try {
       const advisor = await User.findById(advisorId);
-      if (!advisor || advisor.role !== 'academic_friend') {
-          throw new Error(errorsConstants.unauthorized);
+      if (!advisor || advisor.role !== "academic_friend") {
+        throw new Error(errorsConstants.unauthorized);
       }
-        // Calcular duración en horas de la asesoría
+      // Calcular duración en horas de la asesoría
       const start = new Date(dateStart);
       const end = new Date(dateEnd);
       const durationHours = (end - start) / (1000 * 60 * 60); // Convertir ms a horas
       console.log(durationHours);
       if (advisor.availableHours < durationHours) {
-          throw new Error("El asesor no tiene suficientes horas disponibles.");
+        throw new Error("El asesor no tiene suficientes horas disponibles.");
       }
-  
+
       // Crear la asesoría con el estado definido
-      const advisory = new Advisory({ advisorId, careerId, dateStart, dateEnd, day, status });
+      const advisory = new Advisory({
+        advisorId,
+        careerId,
+        dateStart,
+        dateEnd,
+        day,
+        status,
+      });
       await advisory.save();
-  
+
       // Restar las horas de disponibilidad del asesor
       advisor.availableHours -= durationHours;
       await advisor.save();
-  
+
       return advisory;
     } catch (error) {
       throw handlerError("Error in createAdvisory: " + error.message);
@@ -45,6 +58,7 @@ class AdvisoryService {
   }
   async getAdvisoryById(advisoryId) {
     try {
+
       const advisory = await Advisory.findById(advisoryId).populate(
         "advisorId careerId"
       );
@@ -76,145 +90,164 @@ class AdvisoryService {
     }
   }
 
-// Reporte de los últimos 7 días
-async getReportLast7Days () {
-  const last7Days = new Date();
-  last7Days.setDate(last7Days.getDate() - 7);
+  // Reporte de los últimos 7 días
+  async getReportLast7Days() {
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 7);
 
-  const report = await Advisory.aggregate([
-    { $match: { dateStart: { $gte: last7Days } } },
-    {
-      $group: {
-        _id: { year: { $year: "$dateStart" }, day: { $dayOfMonth: "$dateStart" }, month: { $month: "$dateStart" } },
-        totalAdvisories: { $sum: 1 },
-      },
-    },
-    { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
-  ]);
-
-  return report;
-};
-
-// Reporte de los últimos 30 días
-async getReportLast30Days () {
-  const last30Days = new Date();
-  last30Days.setDate(last30Days.getDate() - 30);
-
-  const report = await Advisory.aggregate([
-    { $match: { dateStart: { $gte: last30Days } } },
-    {
-      $group: {
-        _id: { year: { $year: "$dateStart" }, day: { $dayOfMonth: "$dateStart" }, month: { $month: "$dateStart" } },
-        totalAdvisories: { $sum: 1 },
-      },
-    },
-    { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
-  ]);
-
-  return report;
-};
-
-// Reporte de todas las asesorías por mes en el último año
-async getReportLastYear (){
-  const lastYear = new Date();
-  lastYear.setFullYear(lastYear.getFullYear() - 1);
-
-  const report = await Advisory.aggregate([
-    { $match: { dateStart: { $gte: lastYear } } },
-    {
-      $group: {
-        _id: { year: { $year: "$dateStart" }, month: { $month: "$dateStart" } },
-        totalAdvisories: { $sum: 1 },
-      },
-    },
-    { $sort: { "_id.year": 1, "_id.month": 1 } },
-  ]);
-
-  return report;
-};
-
-// Reporte en un rango de fechas personalizado
-async getReportByDateRange (startDate, endDate) {
-  const report = await Advisory.aggregate([
-    { 
-      $match: { 
-        dateStart: { $gte: new Date(startDate), $lte: new Date(endDate) } 
-      } 
-    },
-    {
-      $group: {
-        _id: { year: { $year: "$dateStart" }, month: { $month: "$dateStart" }, day: { $dayOfMonth: "$dateStart" } },
-        totalAdvisories: { $sum: 1 },
-      },
-    },
-    { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
-  ]);
-
-  return report;
-};
-
-// Usuario con más asesorías asignadas
-async getMostActiveAdvisor () { 
-  try {
-    const result = await Advisory.aggregate([
+    const report = await Advisory.aggregate([
+      { $match: { dateStart: { $gte: last7Days } } },
       {
         $group: {
-          _id: "$advisorId",
+          _id: {
+            year: { $year: "$dateStart" },
+            day: { $dayOfMonth: "$dateStart" },
+            month: { $month: "$dateStart" },
+          },
           totalAdvisories: { $sum: 1 },
-          career: { $first: "$careerId" }
-        }
+        },
       },
-      { $sort: { totalAdvisories: -1 } },
-      { $limit: 1 },
-      {
-        $lookup: {
-          from: "users",
-          localField: "_id",
-          foreignField: "_id",
-          as: "advisorInfo"
-        }
-      },
-      {
-        $unwind: "$advisorInfo"
-      },
-      {
-        $lookup: {
-          from: "careers",
-          localField: "career",
-          foreignField: "_id",
-          as: "careerInfo"
-        }
-      },
-      {
-        $unwind: "$careerInfo"
-      },
-      {
-        $lookup: {
-          from: "schedules", 
-          localField: "_id",
-          foreignField: "advisoryId",
-          as: "scheduleInfo"
-        }
-      },
-      {
-        $unwind: { path: "$schedule", preserveNullAndEmptyArrays: true }
-      },
-      {
-        $project: {
-          _id: 0,
-          advisorName: "$advisorInfo.name",
-          totalAdvisories: 1,
-          topic: "$scheduleInfo.topic",
-          career: "$careerInfo.name"
-        }
-      }
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
     ]);
 
-    return result.length > 0 ? result[0] : { message: "No se encontraron asesorías." };
-  } catch (error) {
-    throw new Error("Error al obtener el asesor más activo: " + error.message);
+    return report;
   }
-};
+
+  // Reporte de los últimos 30 días
+  async getReportLast30Days() {
+    const last30Days = new Date();
+    last30Days.setDate(last30Days.getDate() - 30);
+
+    const report = await Advisory.aggregate([
+      { $match: { dateStart: { $gte: last30Days } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$dateStart" },
+            day: { $dayOfMonth: "$dateStart" },
+            month: { $month: "$dateStart" },
+          },
+          totalAdvisories: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+    ]);
+
+    return report;
+  }
+
+  // Reporte de todas las asesorías por mes en el último año
+  async getReportLastYear() {
+    const lastYear = new Date();
+    lastYear.setFullYear(lastYear.getFullYear() - 1);
+
+    const report = await Advisory.aggregate([
+      { $match: { dateStart: { $gte: lastYear } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$dateStart" },
+            month: { $month: "$dateStart" },
+          },
+          totalAdvisories: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]);
+
+    return report;
+  }
+
+  // Reporte en un rango de fechas personalizado
+  async getReportByDateRange(startDate, endDate) {
+    const report = await Advisory.aggregate([
+      {
+        $match: {
+          dateStart: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$dateStart" },
+            month: { $month: "$dateStart" },
+            day: { $dayOfMonth: "$dateStart" },
+          },
+          totalAdvisories: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+    ]);
+
+    return report;
+  }
+
+  // Usuario con más asesorías asignadas
+  async getMostActiveAdvisor() {
+    try {
+      const result = await Advisory.aggregate([
+        {
+          $group: {
+            _id: "$advisorId",
+            totalAdvisories: { $sum: 1 },
+            career: { $first: "$careerId" },
+          },
+        },
+        { $sort: { totalAdvisories: -1 } },
+        { $limit: 1 },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "advisorInfo",
+          },
+        },
+        {
+          $unwind: "$advisorInfo",
+        },
+        {
+          $lookup: {
+            from: "careers",
+            localField: "career",
+            foreignField: "_id",
+            as: "careerInfo",
+          },
+        },
+        {
+          $unwind: "$careerInfo",
+        },
+        {
+          $lookup: {
+            from: "schedules",
+            localField: "_id",
+            foreignField: "advisoryId",
+            as: "scheduleInfo",
+          },
+        },
+        {
+          $unwind: { path: "$schedule", preserveNullAndEmptyArrays: true },
+        },
+        {
+          $project: {
+            _id: 0,
+            advisorName: "$advisorInfo.name",
+            totalAdvisories: 1,
+            topic: "$scheduleInfo.topic",
+            career: "$careerInfo.name",
+          },
+        },
+      ]);
+
+      return result.length > 0
+        ? result[0]
+        : { message: "No se encontraron asesorías." };
+    } catch (error) {
+      throw new Error(
+        "Error al obtener el asesor más activo: " + error.message
+      );
+    }
+  }
 
   // Reporte por año (asesorías realizadas en un año específico)
   async getReportByYear(year) {
@@ -238,7 +271,6 @@ async getMostActiveAdvisor () {
 
     return report;
   }
-
 
   async getTopCareers() {
     return await Advisory.aggregate([
@@ -269,6 +301,16 @@ async getMostActiveAdvisor () {
       { $sort: { totalAdvisories: -1 } },
       { $limit: 5 },
     ]);
+  }
+
+  async getAdvisoriesByAdvisor(advisorId) {
+    return await Advisory.find({ advisorId }) // Filtra asesorías por el ID del asesor
+      .populate("careerId", "name code") // Muestra la información de la carrera
+      .populate({
+        path: "advisorId",
+        select: "name email",
+      })
+      .sort({ dateStart: -1 }); // Ordena por fecha descendente
   }
 }
 

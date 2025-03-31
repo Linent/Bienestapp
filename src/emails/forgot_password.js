@@ -114,7 +114,7 @@ module.exports = (user, hash) => `
             <a
               class="claseBoton"
               style="color: white"
-              href="https://congeniusms.com/recovery-password/${hash} target="
+              href="https://86s54q6q-3000.use2.devtunnels.ms/recovery-password/${hash} target="
               _blank
               >Cambiar Contraseña</a>
           </p>

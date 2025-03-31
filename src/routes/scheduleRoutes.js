@@ -8,5 +8,7 @@ router.get("/", Auth, scheduleController.getSchedules);
 router.get("/:scheduleId", Auth, scheduleController.getScheduleById);
 router.put("/:scheduleId", Auth, scheduleController.updateSchedule);
 router.delete("/:scheduleId", Auth, scheduleController.deleteSchedule);
+// Obtener asesorías agendadas por un estudiante
+router.get("/student/:studentId", Auth, scheduleController.getSchedulesByStudent);
 
 module.exports = router;

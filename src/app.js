@@ -34,7 +34,7 @@ if (config.NODE_ENV !== 'production') {
 
   app.get("/", (req, res) => {
     res.status(200).send({
-      message: "Welcome to amigosacademicos",
+      message: "Bienvenido a amigos academicos",
       environment: config.NODE_ENV,
     });
   });

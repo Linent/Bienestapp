@@ -1,6 +1,6 @@
 const { createTransport } = require("nodemailer");
 const config = require("../config/config"); // Asegúrate de importar tu configuración
-const prueba = require("../emails/pruebas");
+
 const forgot_password = require("../emails/forgot_password");
 
 class EmailService {
@@ -40,10 +40,7 @@ class EmailService {
         }
     }
 
-    async pruebaEmail() {
-        //console.log("Enviando correo de prueba...");
-        await this.sendEmail("ochoaanderson102@gmail.com", "Prueba de Envío", "", prueba());
-    }
+
 
     async forgotPassword(user, hash) {
         //console.log(`Enviando correo de recuperación a ${user.email}`);

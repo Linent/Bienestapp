@@ -19,10 +19,10 @@ security:
   - BearerAuth: []
 
 tags:
-  - name: Careers
-    description: Rutas de carreras
   - name: Users
     description: Rutas de usuarios
+  - name: Careers
+    description: Rutas de carreras
   - name: Advisory
     description: Rutas de asesorías
   - name: Schedule
@@ -30,6 +30,14 @@ tags:
 security:
   - ApiKeyAuth: []
 paths:
+  /career/:
+    get:
+      summary: Obtener todas las carreras
+      tags:
+        - Careers
+      responses:
+        "201":
+          description: Carreras obtenidas
   /career/create:
     post:
       summary: Crear una nueva carrera
@@ -55,14 +63,101 @@ paths:
           description: Datos inválidos
         "500":
           description: Error interno del servidor
-  /career/:
+  /career/{id}:
     get:
-      summary: Obtener todas las carreras
+      summary: Obtener una carrera por ID
       tags:
         - Careers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "65b3a2f45f1d3a001cc9e4d2"
+      responses:
+        "200":
+          description: Carrera encontrada con éxito
+          content:
+            application/json:
+              schema:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                      example: "115"
+                    name:
+                      type: string
+                      example: "Ingeniería de Sistemas"
+                    enable:
+                      type: boolean
+                      example: true
+                    createdAt:
+                      type: string
+                      format: date-time
+                      example: "2025-03-20T12:00:00Z"
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      example: "2025-03-20T12:30:00Z"
+        "404":
+          description: Carrera no encontrada
+        "500":
+          description: Error interno del servidor
+
+    put:
+      summary: Actualizar una carrera
+      tags:
+        - Careers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "67d3b319b244114e7e12ef17"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Ingeniería de Software"
+                code:
+                  type: string
+                  example: "115"
+      responses:
+        "200":
+          description: Carrera actualizada con éxito
+        "404":
+          description: Carrera no encontrada
+        "500":
+          description: Error interno del servidor
+  /career/enable/{careerId}:
+    post:
+      summary: Crear una nueva carrera
+      tags:
+        - Careers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enable:
+                  type: Boolean
+                  example: true
       responses:
         "201":
-          description: Carreras obtenidas
+          description: Carrera creada con éxito
+        "400":
+          description: Datos inválidos
+        "500":
+          description: Error interno del servidor
   /user/register:
     post:
       summary: Crear un nuevo usuario
@@ -139,6 +234,30 @@ paths:
       responses:
         '200':
           description: Lista de todos los usuarios
+  /user/enable/{userId}:
+    post:
+      summary: habilitar o deshabilitar a un usuario
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enable:
+                  type: Boolean
+                  example: false
+      responses:
+        '200':
+          description: usuario habilitado o deshabilitado
   /user/{userId}:
     get:
       summary: obtener un usuario por ID
@@ -189,14 +308,25 @@ paths:
         '200':
           description: datos del usuario actualizado correctamente                   
 
-  /user/mail:
+  /advisory/advisor/{advisorId}:
     get:
-      summary: mail de prueba
+      summary: Obtener asesorías agendadas para un asesor
       tags:
-        - Users
+        - Advisory
+      parameters:
+        - name: advisorId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "65b3a2f45f1d3a001cc9e4d2"
       responses:
         "200":
-          description: se envio el email
+          description: Lista de asesorías obtenida con éxito
+        "404":
+          description: No se encontraron asesorías
+        "500":
+          description: Error interno del servidor        
   /advisory:
     get:
       summary: Obtener todas las asesorías
@@ -205,7 +335,6 @@ paths:
       responses:
         '200':
           description: Lista de asesorías
-
   /advisory/create:
     post:
       summary: Crear una nueva asesoría
@@ -238,10 +367,6 @@ paths:
       responses:
         '201':
           description: Asesoría creada exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/advisory'
         '400':
           description: Datos inválidos
   /advisory/{advisoryId}:
@@ -316,6 +441,7 @@ paths:
           description: Asesoría eliminada correctamente
         '404':
           description: Asesoría no encontrada
+  
   /schedules:
     get:
       summary: obtener todos las asesorías
@@ -388,6 +514,26 @@ paths:
       responses:
         200:
           description: Registro eliminado exitosamente
+  /schedules/student/{studentId}:
+    get:
+      summary: Obtener asesorías agendadas por un estudiante
+      tags:
+        - Schedule
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "67d4df03e1711993d1edd37b"
+      responses:
+        "200":
+          description: Lista de asesorías obtenida con éxito
+        "404":
+          description: No se encontraron asesorías
+        "500":
+          description: Error interno del servidor
+
   /advisory/report/last7days:
     get:
       summary: Obtener el reporte de asesorías de los últimos 7 días
@@ -396,7 +542,6 @@ paths:
       responses:
         "200":
           description: Informe de asesorías agrupadas por día
-
   /advisory/report/last30days:
     get:
       summary: Obtener el reporte de asesorías de los últimos 30 días
@@ -405,8 +550,6 @@ paths:
       responses:
         "200":
           description: Informe de asesorías agrupadas por día
-          
-
   /advisory/report/lastyear:
     get:
       summary: Obtener el reporte de asesorías de cada mes en el último año
@@ -415,8 +558,6 @@ paths:
       responses:
         "200":
           description: Informe de asesorías agrupadas por mes
-
-
   /advisory/report/bydaterange:
     get:
       summary: Obtener el reporte de asesorías en un rango de fechas específico
@@ -440,7 +581,6 @@ paths:
       responses:
         "200":
           description: Informe de asesorías dentro del rango de fechas
-
   /advisory/report/mostActiveAdvisor:
     get:
       summary: Obtener el asesor con más asesorías asignadas
@@ -449,7 +589,6 @@ paths:
       responses:
         "200":
           description: Información del asesor más solicitado, incluyendo nombre, topic y carrera.
-
   /advisory/reports/yearly:
     get:
       summary: Obtener reporte de asesorías por año
@@ -464,7 +603,6 @@ paths:
       responses:
         "200":
           description: Reporte de asesorías anuales
-
   /advisory/report/top-careers:
     get:
       summary: Obtener las 5 carreras con más asesorías
@@ -473,6 +611,7 @@ paths:
       responses:
         "200":
           description: Retorna las carreras con más asesorías
+
   /user/send-email:
     post:
       summary: Enviar un correo a un usuario
@@ -532,8 +671,7 @@ paths:
       responses:
         "200":
           description: Correo enviado exitosamente.
-                    example: "Usuario no encontrado"
-                    
+                    example: "Usuario no encontrado"                   
   /user/forgot-password:
     post:
       summary: Enviar un correo de recuperación de contraseña a un usuario
@@ -556,6 +694,8 @@ paths:
           description: Correo enviado exitosamente.
   /user/recovery-password/{token}:
     post:
+      summary: En esta ruta se puede finalizar la actualización de contraseña si el usuario la olvido
+      description: ruta para finalizar la solicitud de cambio de contraseña.
       tags:
         - Users
       parameters:

@@ -1,9 +1,9 @@
 const { errorsConstants } = require("../constants/errors.constant");
 const { handlerError } = require("../handlers/errors.handlers");
 const ScheduleService = require("../services/scheduleService");
-
+const moment = require("moment"); // Asegúrate de tener moment instalado con: npm install moment
 // Crear un nuevo registro en el horario (schedule)
-const createSchedule = async (req, res) => {
+exports.createSchedule = async (req, res) => {
   try {
     const usersValid = ["admin"];
 
@@ -28,7 +28,7 @@ const createSchedule = async (req, res) => {
 };
 
 // Obtener todos los registros de horarios
-const getSchedules = async (req, res) => {
+exports.getSchedules = async (req, res) => {
   try {
     //?example how to valid by role
     //!TODO on anothers controllers
@@ -46,7 +46,7 @@ const getSchedules = async (req, res) => {
 };
 
 // Obtener un registro por ID
-const getScheduleById = async (req, res) => {
+exports.getScheduleById = async (req, res) => {
   try {
     const { scheduleId } = req.params;
 
@@ -62,7 +62,7 @@ const getScheduleById = async (req, res) => {
 };
 
 // Actualizar el estado de asistencia
-const updateSchedule = async (req, res) => {
+exports.updateSchedule = async (req, res) => {
   try {
     //?example how to valid by role
     //!TODO on anothers controllers
@@ -91,7 +91,7 @@ const updateSchedule = async (req, res) => {
 };
 
 // Eliminar un registro de horario
-const deleteSchedule = async (req, res) => {
+exports.deleteSchedule = async (req, res) => {
   try {
     const { scheduleId } = req.params;
     if (!scheduleId) {
@@ -107,7 +107,7 @@ const deleteSchedule = async (req, res) => {
   }
 };
 
-const updateAttendance = async (req, res) => {
+exports.updateAttendance = async (req, res) => {
   try {
       const { scheduleId, attendanceStatus } = req.body;
       const schedule = await ScheduleService.updateAttendance(scheduleId, attendanceStatus);
@@ -115,13 +115,49 @@ const updateAttendance = async (req, res) => {
   } catch (error) {
       return handlerError(res, 400, error.message);
   }
+}; 
+
+exports.getSchedulesByStudent = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    if(!studentId){
+      return handlerError(res,400, errorsConstants.inputIdRequired);
+    }
+    const schedules = await ScheduleService.getSchedulesByStudent(studentId);
+
+    if (!schedules || schedules.length === 0) {
+      return handlerError(res,400, errorsConstants.schedulesEmpty)
+    }
+
+    return res.status(200).json(schedules);
+  } catch (error) {
+    return handlerError(res, 400, error.message);
+  }
 };
 
-module.exports = {
-  createSchedule,
-  getSchedules,
-  getScheduleById,
-  updateSchedule,
-  deleteSchedule,
-  updateAttendance
+
+
+exports.getSchedulesToday = async (req, res) => {
+  try {
+    const usersValid = ["academic_friend", "admin"];
+
+    if (!usersValid.includes(req.user.role)) {
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
+
+    // Obtener la fecha actual sin la hora
+    const today = moment().startOf("day").toDate();
+    const tomorrow = moment().add(1, "day").startOf("day").toDate();
+
+    const schedulesToday = await ScheduleService.getSchedulesByDate(today, tomorrow);
+
+    if (!schedulesToday || schedulesToday.length === 0) {
+      return handlerError(res, 404, errorsConstants.schedulesEmpty);
+    }
+
+    return res.status(200).json(schedulesToday);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
 };

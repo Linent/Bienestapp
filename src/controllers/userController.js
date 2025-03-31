@@ -5,49 +5,48 @@ const { errorsConstants } = require("../constants/errors.constant");
 const JwtService = require("../services/jwt");
 
 
+// Registro de usuario
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role, career, codigo } = req.body;
-
     if (!name || !email || !password || !role || !codigo) {
-      return handlerError(res, 404, errorsConstants.inputRequired);
+      return handlerError(res, 400, errorsConstants.inputRequired);
     }
-    const userExist = await User.findOne({ email });
-    if (userExist) {
-      return handlerError(res, 401, errorsConstants.userExist);
-    }
-    const userSucces = await userService.registerUser(
-      name,
-      email,
-      password,
-      role,
-      career,
-      codigo
+
+    const userCreated = await userService.registerUser(
+      name, email, password, role, career, codigo
     );
-    
-    return res.status(201).send(userSucces);
+
+    return res.status(201).send(userCreated);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
+// Inicio de sesión
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
-      return handlerError(res, 400, errorsConstants.inputRequired);
+    (email, password);
+    if (!email || !password) return handlerError(res, 400, errorsConstants.inputRequired);
+
     const userData = await userService.loginUser(email, password);
 
     if (!userData) return handlerError(res, 401, errorsConstants.unauthorized);
-
+    
     res.status(200).send(userData);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
+// Obtener todos los usuarios (solo admin puede hacerlo)
 exports.getAllUsers = async (req, res) => {
   try {
+    if (req.user.role !== "admin") {
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
+
     const users = await userService.getAllUsers();
     res.status(200).send(users);
   } catch (error) {
@@ -55,37 +54,61 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+// Obtener un usuario por ID
 exports.getUserById = async (req, res) => {
   try {
-    const { userId } = req.params
+    const { userId } = req.params;
+    const loggedUser = req.user;
+
+    // Permisos: estudiantes solo ven su perfil, otros roles pueden ver cualquier usuario
+    if (loggedUser.role === "student" && loggedUser.id.toString() !== userId) {
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
+
     const user = await userService.getUserById(userId);
-    if (!user) return handlerError(res, 400, errorsConstants.userNotFound);
-    res.send(user);
+    if (!user) return handlerError(res, 404, errorsConstants.userNotFound);
+
+    res.status(200).send(user);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
+// Actualizar usuario (solo el propio usuario o admin puede hacerlo)
 exports.updateUser = async (req, res) => {
   try {
-    const userId = req.params;
+    const { userId } = req.params;
+    const loggedUser = req.user;
     const body = req.body;
+    
+  
+    if (loggedUser.role === "student" && loggedUser.id.toString() !== userId) {
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
+
     const updatedUser = await userService.updateUser(userId, body);
-    if (!updatedUser)
-      return res.status(404).send({ message: "User not found" });
-    res.json(updatedUser);
+    if (!updatedUser) return handlerError(res, 404, errorsConstants.userNotFound);
+
+    res.status(200).json(updatedUser);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
+// Habilitar o deshabilitar usuario (solo admin puede hacerlo)
 exports.disableUser = async (req, res) => {
   try {
-    const userId = req.params;
-    const disabledUser = await userService.disableUser(userId);
-    if (!disabledUser)
-      return handlerError(res, 404, errorsConstants.userNotFound);
-    return res.status(200).send({ succes: true });
+    const { userId } = req.params;
+    const { enable } = req.body;
+
+    if (req.user.role !== "admin") {
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
+
+    const updatedUser = await userService.disableUser(userId, enable);
+    if (!updatedUser) return handlerError(res, 404, errorsConstants.userNotFound);
+
+    return res.status(200).send({ success: true, message: `Usuario ${enable ? "habilitado" : "deshabilitado"} correctamente.` });
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
@@ -101,14 +124,6 @@ exports.sendWelcomeEmail = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
-/* exports.sendPruebas = async () => {
-  try {
-    const pruebaExitosa = await userService.sendPruebas();
-    return res.status(200).send({ pruebaExitosa });
-  } catch (error) {
-    return handlerError(res, 500, errorsConstants.serverError);
-  }
-}; */
 
 exports.forgotPassword = async (req, res) => {
   try {

@@ -1,5 +1,5 @@
 export const errorsConstants = {
-    inputIdRequired: 'errors.input_required',
+    inputIdRequired: 'errors.input_Id_required',
     inputRequired: 'errors.input_required',
     invalidDate: 'errors.coaching.invalid_date',
     invalidNumber: 'errors.user.invalid_number',
@@ -20,4 +20,7 @@ export const errorsConstants = {
     userUpdated: 'User.updated.successfully',
     userDisabled: 'User.disabled.successfully',
     shortPassword: 'password_is_short',
+    schedulesEmpty: 'schedules_is_empty',
+    advisoryEmpty: 'Advisory_is_empty',
+    passwordIncorrect: 'errors.password_incorrect',
   };

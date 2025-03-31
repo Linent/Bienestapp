@@ -4,6 +4,7 @@ const JwtService = require("./jwt");
 const welcomeTemplate   = require('../emails/welcome_user')
 const EmailService = require("../config/emailConfig");
 const { errorsConstants } = require("../constants/errors.constant");
+const { handlerError } = require("../handlers/errors.handlers");
 
 
 
@@ -11,7 +12,7 @@ exports.registerUser = async (name, email, password, role, career, codigo) => {
   try {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      throw new Error("El usuario ya está registrado.");
+      return errorsConstants.userExist;
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -25,7 +26,7 @@ exports.registerUser = async (name, email, password, role, career, codigo) => {
     });
     const createUser = await newUser.save();
      const userId = String(createUser._id);
-    const probando = await exports.sendWelcomeEmail(userId);
+    await exports.sendWelcomeEmail(userId);
 
     return createUser;
   } catch (error) {
@@ -35,13 +36,14 @@ exports.registerUser = async (name, email, password, role, career, codigo) => {
 
 exports.loginUser = async (email, password) => {
   const user = await User.findOne({ email }, { projection: { password: 0 } });
-  if (!user) {
-    throw new Error("Usuario no encontrado.");
+
+  if (!user || !user.enable) {
+    return 
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    throw new Error("Contraseña incorrecta.");
+    return 
   }
 
   const jwtService = new JwtService();
@@ -59,11 +61,12 @@ exports.getUserById = async (id) => {
 };
 
 exports.updateUser = async (id, data) => {
-  return await User.findByIdAndUpdate(id, data, { new: true });
+  
+  return await User.findByIdAndUpdate(id, data, { new: true }).select("-password");
 };
 
-exports.disableUser = async (id) => {
-  return await User.findByIdAndUpdate(id, { enable: false }, { new: true });
+exports.disableUser = async (id, enable) => {
+  return await User.findByIdAndUpdate(id, { enable }, { new: true });
 };
 
 exports.sendWelcomeEmail = async (userId) => {
@@ -86,16 +89,6 @@ try{
   return { message: 'error: '+error };
 }
 };
-
-exports.sendPruebas = async () => {
-  try{
-  const pruebasSucces = await EmailService.pruebaEmail();
-  return pruebasSucces 
-}
-  catch(error){
-    console.log(error);
-  }
-}
 
 exports.forgotPassword = async (email) => {
   try {
@@ -128,4 +121,15 @@ exports.recoveryPassword = async (userId, newPassword) => {
   } catch (error) {
     throw new Error(error.message || "Error al actualizar la contraseña");
   }
+};
+
+exports.getSchedulesByStudent = async (studentId) => {
+  return await Schedule.find({ studentId }) // Filtra las asesorías del estudiante
+    .populate("AdvisoryId") // Relación con la asesoría
+    .populate({
+      path: "AdvisoryId",
+      populate: { path: "advisorId", select: "name email" }, // Info del asesor
+    })
+    .populate("studentId", "name email") // Info del estudiante
+    .sort({ createdAt: -1 }); // Ordena por fecha de creación (más recientes primero)
 };
