@@ -10,5 +10,5 @@ router.put("/:scheduleId", Auth, scheduleController.updateSchedule);
 router.delete("/:scheduleId", Auth, scheduleController.deleteSchedule);
 // Obtener asesorías agendadas por un estudiante
 router.get("/student/:studentId", Auth, scheduleController.getSchedulesByStudent);
-
+router.get("/students/today", Auth, scheduleController.getStudentsScheduledToday);
 module.exports = router;

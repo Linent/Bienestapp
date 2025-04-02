@@ -1,6 +1,8 @@
 const Advisory = require("../models/Advisory");
 const { handlerError } = require("../handlers/errors.handlers");
 const { errorsConstants } = require("../constants/errors.constant");
+const moment = require("moment");
+const userService = require("./userService");
 
 class AdvisoryService {
   async createAdvisory(
@@ -8,42 +10,43 @@ class AdvisoryService {
     careerId,
     dateStart,
     dateEnd,
-    day,
-    status = "pending"
+    status 
   ) {
-    try {
-      const advisor = await User.findById(advisorId);
+      const advisor = await userService.getUserById(advisorId);
       if (!advisor || advisor.role !== "academic_friend") {
-        throw new Error(errorsConstants.unauthorized);
+          throw new Error(errorsConstants.unauthorized);
       }
+  
+      const Day = moment(dateStart).locale('es').format('dddd');
       // Calcular duración en horas de la asesoría
       const start = new Date(dateStart);
       const end = new Date(dateEnd);
       const durationHours = (end - start) / (1000 * 60 * 60); // Convertir ms a horas
-      console.log(durationHours);
-      if (advisor.availableHours < durationHours) {
-        throw new Error("El asesor no tiene suficientes horas disponibles.");
+  
+      // Si al sumar las horas supera 20, no se permite
+      if (advisor.availableHours + durationHours > 20) {
+          throw new Error("El asesor no puede exceder las 20 horas disponibles.");
       }
-
+  
       // Crear la asesoría con el estado definido
-      const advisory = new Advisory({
-        advisorId,
-        careerId,
-        dateStart,
-        dateEnd,
-        day,
-        status,
+      const newAdvisory = new Advisory({
+          advisorId,
+          careerId,
+          dateStart,
+          dateEnd,
+          day: Day,
+          status,
       });
-      await advisory.save();
-
-      // Restar las horas de disponibilidad del asesor
-      advisor.availableHours -= durationHours;
-      await advisor.save();
-
-      return advisory;
-    } catch (error) {
-      throw handlerError("Error in createAdvisory: " + error.message);
-    }
+      
+      // Sumar las horas de la asesoría a las horas disponibles del asesor
+      const horasAcumuladas = advisor.availableHours + durationHours;
+      await userService.updateUser(advisorId, { availableHours: horasAcumuladas });
+  
+      const advisoryCreate = await newAdvisory.save();
+        
+      return advisoryCreate;
+  
+  
   }
   async getAllAdvisory() {
     try {

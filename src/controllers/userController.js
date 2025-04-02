@@ -1,4 +1,3 @@
-const User = require("../models/User");
 const userService = require("../services/userService");
 const { handlerError } = require("../handlers/errors.handlers");
 const { errorsConstants } = require("../constants/errors.constant");

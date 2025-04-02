@@ -91,3 +91,37 @@ exports.getSchedulesByStudent = async (studentId) => {
   })
   .sort({ createdAt: -1 }); // Ordena por fecha de creación (más recientes primero)
 };
+
+exports.getSchedulesByDate = async (startDate, endDate) => {
+  return Schedule.find({
+    date: {
+      $gte: startDate, // Mayor o igual a la fecha de hoy a las 00:00
+      $lt: endDate,    // Menor a la fecha de mañana a las 00:00
+    },
+  });
+};
+exports.getStudentsScheduledToday = async () => { 
+  const fecha = new Date();
+  const todayStart = new Date(fecha);
+  todayStart.setHours(-5, 0, 0, 0);
+  const todayEnd = new Date(fecha);
+  todayEnd.setHours(18, 59, 59, 999);
+
+  
+  // Buscar asesorías que se realicen hoy
+  const advisoriesToday = await Advisory.find({
+    dateStart: { $gte: todayStart, $lte: todayEnd },
+  });
+
+  // Extraer los IDs de esas asesorías
+  const advisoryIds = advisoriesToday.map(advisory => advisory._id);
+
+  // Buscar en `Schedule` los estudiantes agendados en esas asesorías
+  return await Schedule.find({
+    AdvisoryId: { $in: advisoryIds }
+  }).populate({
+    path: 'studentId AdvisoryId', 
+    select: 'name code email advisorId dateStart dateEnd status',
+  })
+  ;
+};

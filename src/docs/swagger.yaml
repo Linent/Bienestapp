@@ -347,10 +347,6 @@ paths:
             schema:
               type: object
               properties:
-                advisorId:
-                  type: string
-                  description: ID del asesor asignado
-                  example: 123
                 careerId:
                   type: string
                   description: ID de la materia
@@ -365,8 +361,8 @@ paths:
                   description: Estado de la asesoría
                   example: pending
       responses:
-        '201':
-          description: Asesoría creada exitosamente
+        "201":
+          description: Carrera creada con éxito
         '400':
           description: Datos inválidos
   /advisory/{advisoryId}:
@@ -441,7 +437,14 @@ paths:
           description: Asesoría eliminada correctamente
         '404':
           description: Asesoría no encontrada
-  
+  /schedules/students/today:
+    get:
+      summary: obtener todos las asesorías
+      tags:
+        - Schedule
+      responses:
+        200:
+          description: Todas las asistencias registradas   
   /schedules:
     get:
       summary: obtener todos las asesorías
@@ -460,13 +463,26 @@ paths:
         content:
           application/json:
             schema:
-            example:
-              "studentId": "67d4df03e1711993d1edd37b"
-              "topic": "Introducción a la Programación"
-              "advisoryId": "67d8d485dc4bf243ae06a1fc"
-              "status": "pending"
+              type: object
+              properties:
+                "studentId":
+                  type: string
+                  descriptión: código del estudiante
+                  example: 67d4df03e1711993d1edd37b
+                "topic": 
+                  type: string
+                  descriptión: 
+                  example: Introducción a la Programación
+                "advisoryId": 
+                  type: string
+                  descriptión: 
+                  example: 67d8d485dc4bf243ae06a1fc
+                "status": 
+                  type: string
+                  descriptión: 
+                  example: pending
       responses:
-        201:
+        '201':
           description: Registro de asistencia agendada creado exitosamente
   /schedules/{scheduleId}:
     get:
@@ -670,8 +686,7 @@ paths:
                   example: 123456789
       responses:
         "200":
-          description: Correo enviado exitosamente.
-                    example: "Usuario no encontrado"                   
+          description: Correo enviado exitosamente.                  
   /user/forgot-password:
     post:
       summary: Enviar un correo de recuperación de contraseña a un usuario

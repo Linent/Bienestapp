@@ -1,8 +1,7 @@
 const { errorsConstants } = require("../constants/errors.constant");
 const { handlerError } = require("../handlers/errors.handlers");
 const ScheduleService = require("../services/scheduleService");
-const moment = require("moment"); // Asegúrate de tener moment instalado con: npm install moment
-// Crear un nuevo registro en el horario (schedule)
+
 exports.createSchedule = async (req, res) => {
   try {
     const usersValid = ["admin"];
@@ -138,26 +137,17 @@ exports.getSchedulesByStudent = async (req, res) => {
 
 
 
-exports.getSchedulesToday = async (req, res) => {
+exports.getStudentsScheduledToday = async (req, res) => {
   try {
+    // Validar que el usuario tenga permisos
     const usersValid = ["academic_friend", "admin"];
-
     if (!usersValid.includes(req.user.role)) {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
-
-    // Obtener la fecha actual sin la hora
-    const today = moment().startOf("day").toDate();
-    const tomorrow = moment().add(1, "day").startOf("day").toDate();
-
-    const schedulesToday = await ScheduleService.getSchedulesByDate(today, tomorrow);
-
-    if (!schedulesToday || schedulesToday.length === 0) {
-      return handlerError(res, 404, errorsConstants.schedulesEmpty);
-    }
-
-    return res.status(200).json(schedulesToday);
+    const studentsToday = await ScheduleService.getStudentsScheduledToday();
+    return res.status(200).json(studentsToday);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
+
