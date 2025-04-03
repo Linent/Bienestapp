@@ -82,7 +82,7 @@ exports.updateSchedule = async (req, res) => {
     );
 
     if (!updateScheduleStatus)
-      return res.status(404).send({ message: "Schedule not found" });
+      return handlerError(res,404,errorsConstants.schedulesNotUpdate)
     res.send(updateScheduleStatus);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
@@ -99,7 +99,7 @@ exports.deleteSchedule = async (req, res) => {
     const deletedSchedule = await ScheduleService.deleteSchedule(scheduleId);
 
     if (!deletedSchedule)
-      return res.status(404).json({ message: "Schedule not found" });
+      return res.status(404).send({ message: "Schedule not found" });
     res.status(200).send({ succes: true });
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
@@ -129,7 +129,7 @@ exports.getSchedulesByStudent = async (req, res) => {
       return handlerError(res,400, errorsConstants.schedulesEmpty)
     }
 
-    return res.status(200).json(schedules);
+    return res.status(200).send(schedules);
   } catch (error) {
     return handlerError(res, 400, error.message);
   }
@@ -145,9 +145,71 @@ exports.getStudentsScheduledToday = async (req, res) => {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
     const studentsToday = await ScheduleService.getStudentsScheduledToday();
-    return res.status(200).json(studentsToday);
+    return res.status(200).send(studentsToday);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
+// Obtener cantidad de asesorías por asesor
+exports.getSchedulesByAdvisor = async (req, res) => {
+  try {
+    const result = await ScheduleService.getSchedulesByAdvisor();
+    if(!result || result.length === 0) {
+      return handlerError(res, 404, errorsConstants.schedulesEmpty);
+    }
+    return res.status(200).send(result);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+// Obtener promedio de asistencia por asesoría
+exports.getAttendancePerSchedule = async (req, res) => {
+  try {
+    const result = await ScheduleService.getAttendancePerSchedule();
+    return res.status(200).send(result);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+// Obtener cantidad de asesorías por tema
+exports.getSchedulesByTopic = async (req, res) => {
+  try {
+    const result = await ScheduleService.getSchedulesByTopic();
+    return res.status(200).send(result);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+// Obtener cantidad de asesorías por mes
+exports.getSchedulesByMonth = async (req, res) => {
+  try {
+    const result = await ScheduleService.getSchedulesByMonth();
+    return res.status(200).send(result);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+// Obtener cantidad de asesorías por día de la semana
+exports.getSchedulesByDay = async (req, res) => {
+  try {
+    const result = await ScheduleService.getSchedulesByDay();
+    return res.status(200).send(result);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+// Obtener cantidad de asesorías por año
+exports.getSchedulesByYear = async (req, res) => {
+  try {
+    const result = await ScheduleService.getSchedulesByYear();
+    return res.status(200).send(result);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};

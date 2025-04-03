@@ -209,8 +209,8 @@ paths:
         content:
           application/json:
             example:
-              email: "usuario@example.com"
-              password: "123456"
+              email: "ochoaanderson102@gmail.com"
+              password: "123456789"
       responses:
         "200":
           description: Inicio de sesión exitoso
@@ -732,3 +732,76 @@ paths:
       responses:
         "200":
           description: Correo enviado exitosamente.
+  
+  /schedules/schedules-by-advisor:
+    get:
+      summary: Obtener la cantidad de asesorías por asesor
+      tags:
+        - Schedule Reports
+      responses:
+        "200":
+          description: Retorna la cantidad de asesorías por asesor
+        "403":
+          description: No autorizado
+        "500":
+          description: Error del servidor
+  /schedules/attendance-per-schedule:
+    get:
+      summary: Obtener el promedio de asistencia por asesoría
+      tags:
+        - Schedule Reports
+      responses:
+        "200":
+          description: Retorna el promedio de asistencia por asesoría
+        "403":
+          description: No autorizado
+        "500":
+          description: Error del servidor
+  /schedules/schedules-by-topic:
+    get:
+      summary: Obtener la cantidad de asesorías por tema
+      tags:
+        - Schedule Reports
+      responses:
+        "200":
+          description: Retorna la cantidad de asesorías por tema
+        "403":
+          description: No autorizado
+        "500":
+          description: Error del servidor
+  /schedules/schedules-by-month:
+    get:
+      summary: Obtener la cantidad de asesorías por mes
+      tags:
+        - Schedule Reports
+      responses:
+        "200":
+          description: Retorna la cantidad de asesorías por mes
+        "403":
+          description: No autorizado
+        "500":
+          description: Error del servidor
+  /schedules/schedules-by-day:
+    get:
+      summary: Obtener la cantidad de asesorías por día de la semana
+      tags:
+        - Schedule Reports
+      responses:
+        "200":
+          description: Retorna la cantidad de asesorías por día de la semana
+        "403":
+          description: No autorizado
+        "500":
+          description: Error del servidor
+  /schedules/schedules-by-year:
+    get:
+      summary: Obtener la cantidad de asesorías por año
+      tags:
+        - Schedule Reports
+      responses:
+        "200":
+          description: Retorna la cantidad de asesorías por año
+        "403":
+          description: No autorizado
+        "500":
+          description: Error del servidor

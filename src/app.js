@@ -24,7 +24,6 @@ app.use('/advisory',advisoryRouter)
 app.use('/user',userRouter);
 
 
-
 if (config.NODE_ENV !== 'production') {
     app.use(morgan("dev"));
     // rutas

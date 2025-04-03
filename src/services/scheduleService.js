@@ -23,15 +23,7 @@ exports.getSchedules = async () => {
   try {
     const schedules = await Schedule.find()
       .populate({ path: "studentId", select: "name codigo email" })
-      .populate({
-        path: "AdvisoryId",
-        select: "subjectId dateStart status",
-        populate: { path: "AdvisorId ", select: "name" },
-        populate: {
-          path: "career",
-          select: "name",
-        },
-      });
+      .populate({ path: "AdvisoryId", select: "advisorId careerId dateStart", populate:{ path:'advisorId careerId', select:'name enable codigo code' } });
     return schedules;
   } catch (error) {
     throw new Error("Error al buscar todas las citas" + error.message);
@@ -124,4 +116,86 @@ exports.getStudentsScheduledToday = async () => {
     select: 'name code email advisorId dateStart dateEnd status',
   })
   ;
+};
+
+
+// Obtener cantidad de asesorías por asesor
+exports.getSchedulesByAdvisor = async () => {
+  try {
+
+    return await Schedule.aggregate([
+      {
+        $lookup: {
+          from: "advisories",
+          localField: "AdvisoryId",
+          foreignField: "_id",
+          as: "advisory"
+        }
+      },
+      { $unwind: "$advisory" },
+      {
+        $group: {
+          _id: "$advisory.advisorId",
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $lookup: {
+          from: "users", // Asegúrate de que la colección de asesores es "users"
+          localField: "_id",
+          foreignField: "_id",
+          as: "advisor"
+        }
+      },
+      { $unwind: "$advisor" },
+      {
+        $project: {
+          _id: 0,
+          advisorId: "$_id",
+          advisorName: "$advisor.name",
+          count: 1
+        }
+      },
+      { $sort: { count: -1 } }, // Ordenar de mayor a menor
+      { $limit: 10 } // Limitar a los 10 asesores más agendados
+    ]); 
+  }
+  catch (error) {
+    throw new Error("Error al obtener la cantidad de asesorías por asesor" + error.message);
+  }
+};
+
+// Obtener promedio de asistencia por asesoría
+exports.getAttendancePerSchedule = async () => {
+  return await Schedule.aggregate([
+    { $group: { _id: "$AdvisoryId", averageAttendance: { $avg: { $cond: ["$attendance", 1, 0] } } } }
+  ]);
+};
+
+// Obtener cantidad de asesorías por tema
+exports.getSchedulesByTopic = async () => {
+  return await Schedule.aggregate([
+    { $group: { _id: "$topic", count: { $sum: 1 } } }
+  ]);
+};
+
+// Obtener cantidad de asesorías por mes
+exports.getSchedulesByMonth = async () => {
+  return await Schedule.aggregate([
+    { $group: { _id: { $month: "$createdAt" }, count: { $sum: 1 } } }
+  ]);
+};
+
+// Obtener cantidad de asesorías por día de la semana
+exports.getSchedulesByDay = async () => {
+  return await Schedule.aggregate([
+    { $group: { _id: { $dayOfWeek: "$createdAt" }, count: { $sum: 1 } } }
+  ]);
+};
+
+// Obtener cantidad de asesorías por año
+exports.getSchedulesByYear = async () => {
+  return await Schedule.aggregate([
+    { $group: { _id: { $year: "$createdAt" }, count: { $sum: 1 } } }
+  ]);
 };

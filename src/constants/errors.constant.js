@@ -24,4 +24,5 @@ export const errorsConstants = {
     advisoryEmpty: 'Advisory_is_empty',
     passwordIncorrect: 'errors.password_incorrect',
     advisoryNotCreate: 'advisory.Not.Create',
+    schedulesNotUpdate: 'schedules.Not.Update',
   };
