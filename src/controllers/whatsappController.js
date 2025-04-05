@@ -3,6 +3,7 @@ import config from "../config/config.js";
 const { handlerError } = require("../handlers/errors.handlers");
 
 import { sendMessage } from "../services/whatsappService.js";
+import messageHandler from "../services/messageHandler.js";
 class WhatsappController {
   async verifyWebhook(req, res) {
     try {
@@ -22,9 +23,9 @@ class WhatsappController {
   }
   async handleIncoming(req, res) {
     try {
+      
       const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
       const senderInfo = req.body.entry?.[0]?.changes[0]?.value?.contacts?.[0];
-  
         if (message) {
           await messageHandler.handleIncomingMessage(message, senderInfo);  
         }

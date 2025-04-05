@@ -8,6 +8,7 @@ const advisorySchema = new mongoose.Schema(
     dateStart: { type: Date, required: true }, // Fecha y hora de la asesoría
     dateEnd: { type: Date, required: true }, //Fecha de la finalización de la asesoría
     status: { type: String, enum: ["pending", "approved", "canceled"], default: "pending" }, // Estado de la asesoría
+    recurring: { type: Boolean, default: true }, // Si la asesoría es recurrente o no
   },
   { timestamps: true }
 );

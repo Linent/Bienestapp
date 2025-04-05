@@ -57,7 +57,7 @@ class AdvisoryService {
       return advisories;
     } catch (error) {
       throw handlerError("Error in get all advisory: " + error.message);
-    }
+    } 
   }
   async getAdvisoryById(advisoryId) {
     try {

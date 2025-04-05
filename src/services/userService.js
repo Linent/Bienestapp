@@ -53,11 +53,14 @@ exports.loginUser = async (email, password) => {
 };
 
 exports.getAllUsers = async () => {
-  return await User.find();
+  return await User.find()
+  .populate({path: "career", select: "name"})
+  .select("-password");
 };
 
 exports.getUserById = async (id) => {
-  return await User.findById(id);
+  return await User.findById(id)
+  .populate({path: "career", select: "name"});
 };
 
 exports.updateUser = async (id, data) => {
@@ -67,7 +70,7 @@ exports.updateUser = async (id, data) => {
 
 exports.disableUser = async (id, enable) => {
   return await User.findByIdAndUpdate(id, { enable }, { new: true });
-};
+}; 
 
 exports.sendWelcomeEmail = async (userId) => {
 try{
