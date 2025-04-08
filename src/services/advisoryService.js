@@ -315,6 +315,102 @@ class AdvisoryService {
       })
       .sort({ dateStart: -1 }); // Ordena por fecha descendente
   }
+   getDayOfWeekNumber  (dayName)  {
+    const days = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+    return days.indexOf(dayName);
+  };
+  // service/advisoryService.js
+  async getAdvisoriesThisWeek  () {
+    try {
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Lunes
+      startOfWeek.setHours(0, 0, 0, 0);
+  
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6); // Domingo
+      endOfWeek.setHours(23, 59, 59, 999);
+  
+      const advisories = await Advisory.find({
+        status: "approved",
+        recurring: true,
+      })
+        .populate({ path: "advisorId", select: "name email codigo" });
+  
+      // Procesamos para esta semana
+      const resultMap = new Map();
+  
+      advisories.forEach((advisory) => {
+        const dayNumber = this.getDayOfWeekNumber(advisory.day);
+  
+        const advisoryDate = new Date(startOfWeek);
+        advisoryDate.setDate(startOfWeek.getDate() + (dayNumber - 1));
+  
+        const start = new Date(advisoryDate);
+        start.setHours(advisory.dateStart.getUTCHours(), advisory.dateStart.getUTCMinutes());
+  
+        const end = new Date(advisoryDate);
+        end.setHours(advisory.dateEnd.getUTCHours(), advisory.dateEnd.getUTCMinutes());
+  
+        const advisorId = advisory.advisorId._id.toString();
+  
+        if (!resultMap.has(advisorId)) {
+          resultMap.set(advisorId, {
+            advisorCode: advisorId,
+            name: advisory.advisorId.name,
+            email: advisory.advisorId.email,
+            codigo: advisory.advisorId.codigo,
+            horarios: [],
+          });
+        }
+  
+        const horarioTexto = `${advisory.day} de ${start.toLocaleTimeString("es-CO", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })} a ${end.toLocaleTimeString("es-CO", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`;
+  
+        resultMap.get(advisorId).horarios.push(horarioTexto);
+      });
+  
+      return Array.from(resultMap.values());
+    } catch (error) {
+      console.error(error);
+      throw new Error("Error al agrupar asesorías semanales: " + error.message);
+    }
+};
+async findOneByAdvisorAndDay(advisorId, day, hour) {
+  try {
+    const advisories = await Advisory.find({ advisorId, day });
+    console.log(advisories);
+    const advisory = advisories.find(a => {
+      const start = new Date(a.dateStart);
+      const end = new Date(a.dateEnd);
+
+      // Extraer año, mes y día de la fecha en UTC
+      const year = start.getUTCFullYear();
+      const month = start.getUTCMonth(); // ¡Ojo! Los meses son 0-indexados
+      const date = start.getUTCDate();
+
+      const [h, m] = hour.split(":").map(Number);
+
+      // Crear una nueva fecha en UTC con la hora del usuario
+      const targetTime = new Date(Date.UTC(year, month, date, h, m, 0));
+
+      // Comparar en UTC
+      return targetTime >= start && targetTime <= end;
+    });
+
+    return advisory;
+  } catch (error) {
+    console.error("Error en findOneByAdvisorDayAndHour:", error);
+    throw error;
+  }
+}
+
+
 }
 
 module.exports = new AdvisoryService();

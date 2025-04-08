@@ -136,3 +136,6 @@ exports.getSchedulesByStudent = async (studentId) => {
     .populate("studentId", "name email") // Info del estudiante
     .sort({ createdAt: -1 }); // Ordena por fecha de creación (más recientes primero)
 };
+exports.findByEmail = (email) =>{
+  return User.findOne({ email }).select("-password"); // Excluye la contraseña
+}

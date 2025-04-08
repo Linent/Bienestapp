@@ -335,6 +335,14 @@ paths:
       responses:
         '200':
           description: Lista de asesorías
+  /advisory/thisweek:
+    get:
+      summary: Obtener asesorías de esta semana
+      tags: 
+        - Advisory
+      responses:
+        '200':
+          description: Lista de asesorías de esta semana
   /advisory/create:
     post:
       summary: Crear una nueva asesoría

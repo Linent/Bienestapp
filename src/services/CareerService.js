@@ -73,3 +73,7 @@ exports.enableCareer = async (id, enable) => {
     };
   }
 };
+exports.findByCode = async (code) => {
+  const career = await Career.findOne({ code });
+  return career;
+};

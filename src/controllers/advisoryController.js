@@ -35,6 +35,15 @@ exports.getAllAdvisories = async (req, res) => {
   }
 };
 
+exports.getAllAdvisoriesWhatsapp = async (req, res) => {
+  try {
+    const advisories = await advisoryService.getAllAdvisory();
+    return res.status(200).send(advisories);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
 // 📌 Obtener asesoría por ID (solo admin y el asesor asignado)
 exports.getAdvisoryById = async (req, res) => {
   try {
@@ -243,5 +252,16 @@ exports.getTopCareersReport = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
+
+// controller/advisoryController.js
+exports.getAdvisoriesThisWeek = async (req, res) => {
+  try {
+    const advisories = await advisoryService.getAdvisoriesThisWeek();
+    return res.status(200).send(advisories);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+ 
 
 

@@ -4,12 +4,7 @@ const ScheduleService = require("../services/scheduleService");
 
 exports.createSchedule = async (req, res) => {
   try {
-    const usersValid = ["admin"];
-
-    if (!usersValid.includes(req.user.role)) {
-      return handlerError(res, 403, errorsConstants.unauthorized);
-    }
-
+ 
     const { studentId, topic, advisoryId } = req.body;
     if (!studentId || !topic || !advisoryId) {
       return handlerError(res, 400, errorsConstants.inputRequired);

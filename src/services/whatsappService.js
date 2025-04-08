@@ -13,6 +13,7 @@ const headers = {
 class WhatsAppService {
   async sendMessage(to, body, messageId) {
     try {
+      console.log(body);
       const response = await axios({
         method: "POST",
         url,
@@ -55,6 +56,7 @@ class WhatsAppService {
 
   async sendInteractiveButtons(to, BodyText, buttons) {
     try {
+      console.log(to, BodyText, buttons);
       const response = await axios({
         method: "POST",
         url,
