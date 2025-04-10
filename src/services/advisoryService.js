@@ -320,24 +320,18 @@ class AdvisoryService {
     return days.indexOf(dayName);
   };
   // service/advisoryService.js
-  async getAdvisoriesThisWeek  () {
+  async getAdvisoriesThisWeek() {
     try {
       const now = new Date();
       const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Lunes
+      startOfWeek.setDate(now.getDay() === 0 ? now.getDate() - 6 : now.getDate() - now.getDay() + 1); // lunes
       startOfWeek.setHours(0, 0, 0, 0);
-  
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6); // Domingo
-      endOfWeek.setHours(23, 59, 59, 999);
   
       const advisories = await Advisory.find({
         status: "approved",
         recurring: true,
-      })
-        .populate({ path: "advisorId", select: "name email codigo" });
+      }).populate({ path: "advisorId", select: "name email codigo" });
   
-      // Procesamos para esta semana
       const resultMap = new Map();
   
       advisories.forEach((advisory) => {
@@ -346,11 +340,26 @@ class AdvisoryService {
         const advisoryDate = new Date(startOfWeek);
         advisoryDate.setDate(startOfWeek.getDate() + (dayNumber - 1));
   
-        const start = new Date(advisoryDate);
-        start.setHours(advisory.dateStart.getUTCHours(), advisory.dateStart.getUTCMinutes());
+        const startUTC = new Date(advisoryDate);
+        startUTC.setUTCHours(advisory.dateStart.getUTCHours(), advisory.dateStart.getUTCMinutes());
   
-        const end = new Date(advisoryDate);
-        end.setHours(advisory.dateEnd.getUTCHours(), advisory.dateEnd.getUTCMinutes());
+        const endUTC = new Date(advisoryDate);
+        endUTC.setUTCHours(advisory.dateEnd.getUTCHours(), advisory.dateEnd.getUTCMinutes());
+  
+        // Formato HH:mm (24 horas) en zona horaria Colombia
+        const startCol = new Intl.DateTimeFormat("es-CO", {
+          timeZone: "America/Bogota",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(startUTC);
+  
+        const endCol = new Intl.DateTimeFormat("es-CO", {
+          timeZone: "America/Bogota",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(endUTC);
   
         const advisorId = advisory.advisorId._id.toString();
   
@@ -364,14 +373,7 @@ class AdvisoryService {
           });
         }
   
-        const horarioTexto = `${advisory.day} de ${start.toLocaleTimeString("es-CO", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })} a ${end.toLocaleTimeString("es-CO", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`;
-  
+        const horarioTexto = `${advisory.day} de ${startCol} a ${endCol}`;
         resultMap.get(advisorId).horarios.push(horarioTexto);
       });
   
@@ -380,34 +382,29 @@ class AdvisoryService {
       console.error(error);
       throw new Error("Error al agrupar asesorías semanales: " + error.message);
     }
-};
-async findOneByAdvisorAndDay(advisorId, day, hour) {
-  try {
-    const advisories = await Advisory.find({ advisorId, day });
-    console.log(advisories);
-    const advisory = advisories.find(a => {
-      const start = new Date(a.dateStart);
-      const end = new Date(a.dateEnd);
-
-      // Extraer año, mes y día de la fecha en UTC
-      const year = start.getUTCFullYear();
-      const month = start.getUTCMonth(); // ¡Ojo! Los meses son 0-indexados
-      const date = start.getUTCDate();
-
-      const [h, m] = hour.split(":").map(Number);
-
-      // Crear una nueva fecha en UTC con la hora del usuario
-      const targetTime = new Date(Date.UTC(year, month, date, h, m, 0));
-
-      // Comparar en UTC
-      return targetTime >= start && targetTime <= end;
-    });
-
-    return advisory;
-  } catch (error) {
-    console.error("Error en findOneByAdvisorDayAndHour:", error);
-    throw error;
   }
+  
+  
+
+async  findOneByAdvisorAndDay(advisorCode, selectedDay, selectedHour) {
+  // Buscar al asesor por su código
+  const advisor = await userService.findByAdvisorCode(advisorCode);
+  if (!advisor) return null;
+  // Buscar asesorías del asesor ese día
+  const advisories = await Advisory.find({
+    advisorId: advisor._id,
+    day: selectedDay.toLowerCase(), // en minúsculas para coincidir con 'miércoles', etc.
+  });
+
+  // Filtrar por hora exacta
+  const advisory = advisories.find((a) => {
+    
+    const hora = moment(a.dateStart).format("HH:mm");
+    console.log("Esta es la hora: "+hora);
+    return hora === selectedHour;
+  });
+
+  return advisory || null;
 }
 
 

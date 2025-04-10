@@ -7,7 +7,6 @@ const { errorsConstants } = require("../constants/errors.constant");
 const { handlerError } = require("../handlers/errors.handlers");
 
 
-
 exports.registerUser = async (name, email, password, role, career, codigo) => {
   try {
     const existingUser = await User.findOne({ email });
@@ -138,4 +137,9 @@ exports.getSchedulesByStudent = async (studentId) => {
 };
 exports.findByEmail = (email) =>{
   return User.findOne({ email }).select("-password"); // Excluye la contraseña
+}
+exports.findByAdvisorCode= async(advisorCode) => {
+  const advisor = await User.findById(advisorCode);
+
+  return advisor;
 }
