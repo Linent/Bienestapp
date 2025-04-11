@@ -21,6 +21,9 @@ module.exports = {
     EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ,
     EMAIL: process.env.EMAIL_USER,
     EMAIL_SMTP: process.env.EMAIL_SMTP,
-    EMAIL_PORT: process.env.EMAIL_PORT
+    EMAIL_PORT: process.env.EMAIL_PORT,
+
+    CHATGPT_API_KEY: process.env.CHATGPT_API_KEY || "",
+    GEMINI_API_KEY:process.env.GEMINI_API_KEY,
 };
 

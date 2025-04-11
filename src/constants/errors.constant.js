@@ -25,4 +25,6 @@ export const errorsConstants = {
     passwordIncorrect: 'errors.password_incorrect',
     advisoryNotCreate: 'advisory.Not.Create',
     schedulesNotUpdate: 'schedules.Not.Update',
+    openAiError: 'openAi.error',
+    userNotEnabled: 'errors.user_not_enabled',
   };

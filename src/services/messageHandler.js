@@ -3,9 +3,14 @@ import whatsappService from "./whatsappService";
 import userService from "./userService";
 import scheduleService from "./scheduleService";
 import careerService from "./CareerService";
+import openAiService from "./openAiService";
+import { loadPDFContent } from "../utils/loadPdfContent";
+import askGemini from "./geminiService";
+
 class MessageHandler {
   constructor() {
     this.appointmentState = {};
+    this.assistandState = {};
   }
 
   async handleIncomingMessage(message, senderInfo) {
@@ -20,6 +25,8 @@ class MessageHandler {
           await this.sendMedia(message.from);
         } else if (this.appointmentState[message.from]) {
           await this.handleAppointmentFlow(message.from, incomingMessage);
+        } else if (this.assistandState[message.from]) {
+          await this.handleAssistandFlow(message.from, incomingMessage);
         } else {
           const response = `Echo: ${message.text.body}`;
           await whatsappService.sendMessage(message.from, response, message.id);
@@ -104,8 +111,18 @@ class MessageHandler {
         return;
 
       case "consultar servicios":
+        this.assistandState[to] = { step: "question" };
         responseMessage =
-          "Has seleccionado consultar servicios. ¿Qué necesitas saber?";
+          `Has seleccionado consultar servicios. Estos son algunos temas sobre los que puedes preguntar:\n\n` +
+          `- Asesoría psicológica y orientación personal\n` +
+          `- Citas médicas y odontológicas\n` +
+          `- Actividades deportivas, culturales y recreativas\n` +
+          `- Programas de apoyo socioeconómico (subsidios o auxilios)\n` +
+          `- Información sobre el seguro estudiantil\n` +
+          `- Cursos, talleres y formación integral\n` +
+          `- Programa Amigos Académicos\n` +
+          `- Convocatorias y eventos institucionales\n\n` +
+          `¿Sobre qué necesitas saber más?`;
         break;
 
       default:
@@ -216,10 +233,11 @@ class MessageHandler {
           // Validar que sea una hora con formato HH:mm
           const isValid = /^\d{2}:\d{2}$/.test(message.trim());
           if (!isValid) {
-            responseMessage = "❌ Hora no válida. Usa el formato HH:mm (ej: 09:30).";
+            responseMessage =
+              "❌ Hora no válida. Usa el formato HH:mm (ej: 09:30).";
             break;
           }
-        
+
           state.selectedHour = message.trim();
           state.step = "topic";
           responseMessage = "📝 ¿Cuál es el tema de la asesoría?";
@@ -318,6 +336,61 @@ class MessageHandler {
         "❌ Ocurrió un error. Intenta nuevamente."
       );
       delete this.appointmentState[to];
+    }
+  }
+  /* async handleAssistandFlow(to, message) {
+    const state = this.assistandState[to];
+    let responseMessage; 
+    const menuMessage = '¿La respuesta fue de tu ayuda?'
+    const buttons = [
+      {
+        type: 'reply',
+        reply: { id: 'option_4', title: 'Sí, gracias' },
+      },
+      {
+        type: 'reply',
+        reply: { id: 'option_5', title: 'Hacer otra pregunta' },
+      },
+    ];
+    if(state.step==='question'){
+      responseMessage = await openAiService(message);
+    }
+    delete this.assistandState[to];
+    await whatsappService.sendMessage(to, responseMessage);
+    await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+    await whatsappService.markAsRead(message.id);
+  } */
+  async handleAssistandFlow(to, message) {
+    const state = this.assistandState[to];
+    let responseMessage;
+    const menuMessage = "¿La respuesta fue de tu ayuda?";
+    const buttons = [
+      {
+        type: "reply",
+        reply: { id: "option_4", title: "Sí, gracias" },
+      },
+      {
+        type: "reply",
+        reply: { id: "option_5", title: "Hacer otra pregunta" },
+      },
+    ];
+
+    try {
+      if (state.step === "question") {
+        // 📘 Cargar contenido del PDF si deseas usarlo como base de conocimiento
+        const pdfText = await loadPDFContent("./src/docs/bienestar.pdf"); // ajusta la ruta real
+        responseMessage = await askGemini(message, pdfText);
+      }
+
+      delete this.assistandState[to];
+      await whatsappService.sendMessage(to, responseMessage);
+      await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+    } catch (error) {
+      console.error("Error en handleAssistandFlow con Gemini:", error);
+      await whatsappService.sendMessage(
+        to,
+        "Lo sentimos, ocurrió un error al procesar tu consulta."
+      );
     }
   }
 }

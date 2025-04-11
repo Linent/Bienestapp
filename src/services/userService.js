@@ -13,7 +13,6 @@ exports.registerUser = async (name, email, password, role, career, codigo) => {
     if (existingUser) {
       return errorsConstants.userExist;
     }
-
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({
       name,
