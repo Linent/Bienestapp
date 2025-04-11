@@ -56,7 +56,7 @@ class WhatsAppService {
 
   async sendInteractiveButtons(to, BodyText, buttons) {
     try {
-      console.log(to, BodyText, buttons);
+      //console.log(to, BodyText, buttons);
       const response = await axios({
         method: "POST",
         url,

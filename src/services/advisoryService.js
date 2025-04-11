@@ -400,7 +400,6 @@ async  findOneByAdvisorAndDay(advisorCode, selectedDay, selectedHour) {
   const advisory = advisories.find((a) => {
     
     const hora = moment(a.dateStart).format("HH:mm");
-    console.log("Esta es la hora: "+hora);
     return hora === selectedHour;
   });
 
