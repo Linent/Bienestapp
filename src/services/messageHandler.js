@@ -33,11 +33,19 @@ class MessageHandler {
         }
 
         await whatsappService.markAsRead(message.id);
+
       } else if (message?.type === "interactive") {
         const selectedOption = message.interactive?.button_reply?.title
-          .toLowerCase()
+          ?.toLowerCase()
           .trim();
-        await this.handleMenuOption(message.from, selectedOption);
+
+        // ✅ Detectar retroalimentación del asistente
+        if (["sí, gracias", "hacer otra pregunta"].includes(selectedOption)) {
+          await this.handleAssistandFeedback(message.from, selectedOption);
+        } else {
+          await this.handleMenuOption(message.from, selectedOption);
+        }
+
         await whatsappService.markAsRead(message.id);
       }
     } catch (error) {
@@ -45,16 +53,11 @@ class MessageHandler {
     }
   }
 
+  // ✅ Saludo simple
   isGreeting(message) {
-    const greetings = [
-      "hola",
-      "buenos días",
-      "buenas tardes",
-      "buenas noches",
-      "hello",
-      "hi",
-    ];
-    return greetings.includes(message);
+    return ["hola", "buenos días", "buenas tardes", "buenas noches", "quiero saber algo"].includes(
+      message
+    );
   }
 
   getSenderName(senderInfo) {
@@ -68,18 +71,44 @@ class MessageHandler {
       .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1))
       .join(" ");
   }
+   // ✅ Maneja botones después de una respuesta: "Sí, gracias" / "Hacer otra pregunta"
+  async handleAssistandFeedback(to, selectedOption) {
+    let responseMessage;
 
-  async sendWelcome(to, messageId, senderInfo) {
-    const nombre = this.capitalizarTexto(this.getSenderName(senderInfo)).split(
+    switch (selectedOption.toLowerCase()) {
+      case "sí, gracias":
+        delete this.assistandState[to];
+        responseMessage =
+          "¡Nos alegra haber sido de ayuda! 😊 Si necesitas algo más, no dudes en escribirnos.";
+        break;
+
+      case "hacer otra pregunta":
+        this.assistandState[to] = { step: "question" };
+        responseMessage =
+          "Perfecto. Puedes escribirme tu nueva pregunta sobre los servicios de bienestar universitario.";
+        break;
+
+      default:
+        responseMessage =
+          "No entendimos tu respuesta. Por favor selecciona una opción válida.";
+    }
+
+    await whatsappService.sendMessage(to, responseMessage);
+  }
+   // ✅ Enviar mensaje de bienvenida
+   async sendWelcome(to, msgId, senderInfo) {
+    const name = this.capitalizarTexto(this.getSenderName(senderInfo)).split(
       " "
     )[0];
-    const welcomeMessage = `Hola ${nombre}, bienvenido a nuestra plataforma. ¿En qué puedo ayudarte?`;
-    await whatsappService.sendMessage(to, welcomeMessage, messageId);
-    await whatsappService.markAsRead(messageId);
+    await whatsappService.sendMessage(
+      to,
+      `¡Hola ${name}! 👋 Bienvenido(a) al asistente de bienestar universitario.`,
+      msgId
+    );
   }
 
   async sendWelcomeMenu(to) {
-    const menuMessage = `Hola, ¿En qué puedo ayudarte?`;
+    const menuMessage = "¿En qué podemos ayudarte hoy?";
     const buttons = [
       {
         type: "reply",
@@ -89,14 +118,12 @@ class MessageHandler {
         type: "reply",
         reply: { id: "option_2", title: "Consultar servicios" },
       },
-      /* {
-        type: "reply",
-        reply: { id: "option_3", title: "Ubicación" },
-      }, */
     ];
+
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
   }
 
+  // ✅ Muestra menú principal y activa flujos
   async handleMenuOption(to, selectedOption) {
     let responseMessage;
 
@@ -105,9 +132,7 @@ class MessageHandler {
         this.appointmentState[to] = { step: "showAdvisors" };
         responseMessage =
           "Perfecto. Vamos a agendar tu asesoría. 📚 Buscando asesores disponibles...";
-
-        // ⚠️ Ejecutamos directamente el flujo inicial
-        await this.handleAppointmentFlow(to, null); // Pasamos `null` como message para iniciar
+        await this.handleAppointmentFlow(to, null);
         return;
 
       case "consultar servicios":
@@ -139,7 +164,7 @@ class MessageHandler {
     const type = "document";
     await whatsappService.sendMediaMessage(to, type, mediaUrl, caption);
   }
-
+  
   async handleAppointmentFlow(to, message) {
     const state = this.appointmentState[to] || { step: "showAdvisors" };
     let responseMessage;
@@ -360,39 +385,37 @@ class MessageHandler {
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
     await whatsappService.markAsRead(message.id);
   } */
-  async handleAssistandFlow(to, message) {
-    const state = this.assistandState[to];
-    let responseMessage;
-    const menuMessage = "¿La respuesta fue de tu ayuda?";
-    const buttons = [
-      {
-        type: "reply",
-        reply: { id: "option_4", title: "Sí, gracias" },
-      },
-      {
-        type: "reply",
-        reply: { id: "option_5", title: "Hacer otra pregunta" },
-      },
-    ];
-
-    try {
-      if (state.step === "question") {
-        // 📘 Cargar contenido del PDF si deseas usarlo como base de conocimiento
-        const pdfText = await loadPDFContent("./src/docs/bienestar.pdf"); // ajusta la ruta real
-        responseMessage = await askGemini(message, pdfText);
+    async handleAssistandFlow(to, message) {
+      const state = this.assistandState[to];
+      let responseMessage;
+      const menuMessage = "¿La respuesta fue de tu ayuda?";
+      const buttons = [
+        {
+          type: "reply",
+          reply: { id: "option_4", title: "Sí, gracias" },
+        },
+        {
+          type: "reply",
+          reply: { id: "option_5", title: "Hacer otra pregunta" },
+        },
+      ];
+  
+      try {
+        if (state.step === "question") {
+          const pdfText = await loadPDFContent("./src/docs/bienestar.pdf"); // Ajusta si cambia la ruta
+          responseMessage = await askGemini(message, pdfText);
+        }
+  
+        await whatsappService.sendMessage(to, responseMessage);
+        await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+      } catch (error) {
+        console.error("Error en handleAssistandFlow con Gemini:", error);
+        await whatsappService.sendMessage(
+          to,
+          "Lo sentimos, ocurrió un error al procesar tu consulta."
+        );
       }
-
-      delete this.assistandState[to];
-      await whatsappService.sendMessage(to, responseMessage);
-      await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
-    } catch (error) {
-      console.error("Error en handleAssistandFlow con Gemini:", error);
-      await whatsappService.sendMessage(
-        to,
-        "Lo sentimos, ocurrió un error al procesar tu consulta."
-      );
     }
-  }
 }
 
 export default new MessageHandler();
