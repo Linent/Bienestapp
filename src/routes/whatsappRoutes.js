@@ -5,5 +5,4 @@ const router = express.Router();
 
 router.post("/webhook", whatsappController.handleIncoming);
 router.get("/webhook", whatsappController.verifyWebhook);
-
-export default router;
+module.exports = router;
