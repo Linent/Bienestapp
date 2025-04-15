@@ -5,7 +5,7 @@ const JwtService = require("../services/jwt");
 
 
 // Registro de usuario
-exports.register = async (req, res) => {
+const register = async (req, res) => {
   try {
     const { name, email, password, role, career, codigo } = req.body;
     if (!name || !email || !password || !role || !codigo) {
@@ -23,7 +23,7 @@ exports.register = async (req, res) => {
 };
 
 // Inicio de sesión
-exports.login = async (req, res) => {
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     (email, password);
@@ -40,7 +40,7 @@ exports.login = async (req, res) => {
 };
 
 // Obtener todos los usuarios (solo admin puede hacerlo)
-exports.getAllUsers = async (req, res) => {
+const getAllUsers = async (req, res) => {
   try {
     if (req.user.role !== "admin") {
       return handlerError(res, 403, errorsConstants.unauthorized);
@@ -54,7 +54,7 @@ exports.getAllUsers = async (req, res) => {
 };
 
 // Obtener un usuario por ID
-exports.getUserById = async (req, res) => {
+const getUserById = async (req, res) => {
   try {
     const { userId } = req.params;
     const loggedUser = req.user;
@@ -74,7 +74,7 @@ exports.getUserById = async (req, res) => {
 };
 
 // Actualizar usuario (solo el propio usuario o admin puede hacerlo)
-exports.updateUser = async (req, res) => {
+const updateUser = async (req, res) => {
   try {
     const { userId } = req.params;
     const loggedUser = req.user;
@@ -95,7 +95,7 @@ exports.updateUser = async (req, res) => {
 };
 
 // Habilitar o deshabilitar usuario (solo admin puede hacerlo)
-exports.disableUser = async (req, res) => {
+const disableUser = async (req, res) => {
   try {
     const { userId } = req.params;
     const { enable } = req.body;
@@ -113,7 +113,7 @@ exports.disableUser = async (req, res) => {
   }
 };
 
-exports.sendWelcomeEmail = async (req, res) => {
+const sendWelcomeEmail = async (req, res) => {
   try {
     const { userId } = req.body;
 
@@ -124,7 +124,7 @@ exports.sendWelcomeEmail = async (req, res) => {
   }
 };
 
-exports.forgotPassword = async (req, res) => {
+const forgotPassword = async (req, res) => {
   try {
       const { email } = req.body;
 
@@ -139,7 +139,7 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-exports.recoveryPassword = async (req, res) => {
+const recoveryPassword = async (req, res) => {
   try {
     const { token } = req.params;
 
@@ -163,4 +163,16 @@ exports.recoveryPassword = async (req, res) => {
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
+};
+
+module.exports = {
+  register,
+  login,
+  getAllUsers,
+  getUserById,
+  updateUser,
+  disableUser,
+  sendWelcomeEmail,
+  forgotPassword,
+  recoveryPassword,
 };

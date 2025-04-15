@@ -1,11 +1,11 @@
-import advisoryService from "./advisoryService";
-import whatsappService from "./whatsappService";
-import userService from "./userService";
-import scheduleService from "./scheduleService";
-import careerService from "./CareerService";
-import openAiService from "./openAiService";
-import { loadPDFContent } from "../utils/loadPdfContent";
-import askGemini from "./geminiService";
+const  advisoryService = require("./advisoryService");
+const  whatsappService = require("./whatsappService");
+const  userService = require("./userService");
+const  scheduleService = require("./scheduleService");
+const  careerService = require("./CareerService");
+const  openAiService = require("./openAiService");
+const  { loadPDFContent } = require("../utils/loadPdfContent");
+const  askGemini = require("./geminiService");
 
 class MessageHandler {
   constructor() {
@@ -418,4 +418,4 @@ class MessageHandler {
     }
 }
 
-export default new MessageHandler();
+module.exports = new MessageHandler();

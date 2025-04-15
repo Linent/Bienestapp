@@ -1,11 +1,10 @@
 const config = require("./config/config");
-const Database = require("./config/database").default;
+const db = require("./config/database");
 const app = require("./app");
 
 const port = process.env.PORT || config.PORT;
 
 // MongoDB connection
-const db = new Database();
 db.connect();
 
 app.listen(port, () => {

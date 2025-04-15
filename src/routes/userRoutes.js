@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-import userController from "../controllers/userController";
-import Auth from "../middlewares/authMiddleware";
+const userController = require("../controllers/userController");
+const Auth = require ("../middlewares/authMiddleware");
 
 router.get("/", Auth, userController.getAllUsers);
 router.post("/recovery-password/:token", userController.recoveryPassword);

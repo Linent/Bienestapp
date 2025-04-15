@@ -1,6 +1,6 @@
-import axios from "axios";
-import config from "../config/config";
-import { fi } from "date-fns/locale";
+const axios = require ("axios");
+const config = require ("../config/config");
+const { fi } = require ("date-fns/locale");
 
 const API_TOKEN = config.API_TOKEN;
 const API_VERSION = config.API_VERSION;
@@ -122,4 +122,4 @@ class WhatsAppService {
     }
   }
 }
-export default new WhatsAppService();
+module.exports = new WhatsAppService();

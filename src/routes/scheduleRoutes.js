@@ -1,5 +1,5 @@
 const express = require("express");
-import scheduleController from "../controllers/scheduleController";
+const scheduleController = require ("../controllers/scheduleController");
 const router = express.Router();
 const Auth = require("../middlewares/authMiddleware");
 

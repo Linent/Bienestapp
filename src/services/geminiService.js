@@ -1,5 +1,5 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GEMINI_API_KEY } from "../config/config.js"; // Asegúrate que exportas la constante correctamente
+const { GoogleGenerativeAI } = require ("@google/generative-ai");
+const { GEMINI_API_KEY } = require ("../config/config.js"); // Asegúrate que exportas la constante correctamente
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
@@ -23,5 +23,5 @@ const askGemini = async (question, knowledgeBase) => {
   return response.text();
 };
 
-export default askGemini;
+module.exports = askGemini;
 

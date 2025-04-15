@@ -1,8 +1,8 @@
-import OpenAi from 'openai';
-import config from '../config/config.js';
-import { errorsConstants } from '../constants/errors.constant.js';
-import { handlerError } from '../handlers/errors.handlers.js';
-import bienestarPrompt from'../utils/promps.js';
+const OpenAi = require ('openai');
+const config = require ('../config/config.js');
+const { errorsConstants } = require ('../constants/errors.constant.js');
+const { handlerError } = require ('../handlers/errors.handlers.js');
+const bienestarPrompt = require ('../utils/promps.js');
 const client = new OpenAi({
   apiKey: config.CHATGPT_API_KEY,  
 });
@@ -19,4 +19,4 @@ const openAiService = async (message) => {
     }
     }
 
-export default openAiService;
+    module.exports = openAiService;

@@ -1,5 +1,5 @@
-import express from "express";
-import whatsappController from "../controllers/whatsappController.js";
+const express = require ("express");
+const whatsappController = require ("../controllers/whatsappController.js");
 
 const router = express.Router();
 

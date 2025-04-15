@@ -1,9 +1,9 @@
-import { errorsConstants } from "../constants/errors.constant.js"
-import config from "../config/config.js";
+const { errorsConstants } = require ("../constants/errors.constant.js")
+const config = require ("../config/config.js");
 const { handlerError } = require("../handlers/errors.handlers");
 
-import { sendMessage } from "../services/whatsappService.js";
-import messageHandler from "../services/messageHandler.js";
+const { sendMessage } = require ("../services/whatsappService.js");
+const messageHandler = require ("../services/messageHandler.js");
 class WhatsappController {
   async verifyWebhook(req, res) {
     try {
@@ -37,4 +37,4 @@ class WhatsappController {
   }
 }
 
-export default new WhatsappController();
+module.exports = new WhatsappController();

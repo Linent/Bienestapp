@@ -19,5 +19,6 @@ al estudiante a comunicarse con el área de Bienestar directamente o a consultar
 Sé siempre cordial, paciente y servicial.
 `;
 
-export default bienestarPrompt;
+module.exports = bienestarPrompt;
+
 

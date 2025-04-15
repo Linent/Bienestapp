@@ -1,3 +1,10 @@
-export const handlerError = (res, status, message) => {
-  res.status(status).json({ message });
+const handlerError = (res, status, message) => {
+  res.status(status).json({
+    message
+  });
 };
+
+module.exports = {
+  handlerError
+};
+

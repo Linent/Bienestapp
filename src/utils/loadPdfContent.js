@@ -1,8 +1,13 @@
-import fs from 'fs/promises';
-import pdfParse from 'pdf-parse';
+const fs = require('fs/promises');
+const pdfParse = require('pdf-parse');
 
-export const loadPDFContent = async (filePath) => {
+const loadPDFContent = async (filePath) => {
   const buffer = await fs.readFile(filePath);
   const data = await pdfParse(buffer);
   return data.text; // contenido plano del PDF
 };
+
+module.exports = {
+  loadPDFContent
+};
+
