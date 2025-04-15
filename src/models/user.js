@@ -11,7 +11,7 @@ const userSchema =  new mongoose.Schema(
       availableHours: { type: Number, default: 0, max: 20 } // Máximo 20 horas disponibles
     },
     {
-      timestamps: true 
+      timestamps: true  
     }
   );
 
