@@ -175,7 +175,7 @@ exports.getAttendancePerSchedule = async () => {
 // Obtener cantidad de asesorías por tema
 exports.getSchedulesByTopic = async () => {
   return await Schedule.aggregate([
-    { $group: { _id: "$topic", count: { $sum: 1 } } }
+    { $group: { topic: "$topic", count: { $sum: 1 } } }
   ]);
 };
 
