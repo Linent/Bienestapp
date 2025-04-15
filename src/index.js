@@ -5,7 +5,7 @@ const app = require("./app");
 //config de casbin
 const casbinConfig = require("./config/casbin");
 
-const port= config.PORT;
+const port = process.env.PORT || config.PORT;
 //MongoDB conecction
 const db = new Database();
 db.connect();
