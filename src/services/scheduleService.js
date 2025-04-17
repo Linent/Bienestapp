@@ -120,10 +120,10 @@ exports.getStudentsScheduledToday = async () => {
 
 
 // Obtener cantidad de asesorías por asesor
-exports.getSchedulesByAdvisor = async () => {
+exports.getAttendedSchedulesByAdvisor = async () => {
   try {
-
-    return await Schedule.aggregate([
+    const result = await Schedule.aggregate([
+      { $match: { attendance: true } }, // Solo las asesorías atendidas
       {
         $lookup: {
           from: "advisories",
@@ -141,7 +141,7 @@ exports.getSchedulesByAdvisor = async () => {
       },
       {
         $lookup: {
-          from: "users", // Asegúrate de que la colección de asesores es "users"
+          from: "users",
           localField: "_id",
           foreignField: "_id",
           as: "advisor"
@@ -156,12 +156,12 @@ exports.getSchedulesByAdvisor = async () => {
           count: 1
         }
       },
-      { $sort: { count: -1 } }, // Ordenar de mayor a menor
-      { $limit: 10 } // Limitar a los 10 asesores más agendados
-    ]); 
-  }
-  catch (error) {
-    throw new Error("Error al obtener la cantidad de asesorías por asesor" + error.message);
+      { $sort: { count: -1 } }
+    ]);
+    console.log(result);
+    return result;
+  } catch (error) {
+    throw new Error("Error al obtener asesorías atendidas por asesor: " + error.message);
   }
 };
 

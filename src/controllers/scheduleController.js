@@ -149,7 +149,8 @@ exports.getStudentsScheduledToday = async (req, res) => {
 // Obtener cantidad de asesorías por asesor
 exports.getSchedulesByAdvisor = async (req, res) => {
   try {
-    const result = await ScheduleService.getSchedulesByAdvisor();
+    const result = await ScheduleService.getAttendedSchedulesByAdvisor();
+    console.log(result);
     if(!result || result.length === 0) {
       return handlerError(res, 404, errorsConstants.schedulesEmpty);
     }
