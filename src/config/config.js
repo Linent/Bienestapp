@@ -2,6 +2,7 @@ const dotenv = require("dotenv");
 dotenv.config({ path: `./.env.${process.env.NODE_ENV || 'development'}` });
 
 module.exports = {
+    FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3000",
     PORT: process.env.PORT || 10000,
     MONGODB_URI: process.env.MONGODB_URI || "",
     SECRET_KEY: process.env.SECRET_KEY || "",
