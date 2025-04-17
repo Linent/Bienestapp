@@ -115,7 +115,7 @@ module.exports = (user, hash) => `
             <a
               class="claseBoton"
               style="color: white"
-              href="https://${FRONTEND_URL}/recovery-password/${hash}" target="_blank"
+              href="${FRONTEND_URL}/recovery-password/${hash}" target="_blank"
               >Cambiar Contraseña</a>
           </p>
           <!-- Gracias -->
