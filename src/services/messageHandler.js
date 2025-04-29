@@ -143,7 +143,6 @@ class MessageHandler {
           `- Citas médicas y odontológicas\n` +
           `- Actividades deportivas, culturales y recreativas\n` +
           `- Programas de apoyo socioeconómico (subsidios o auxilios)\n` +
-          `- Información sobre el seguro estudiantil\n` +
           `- Cursos, talleres y formación integral\n` +
           `- Programa Amigos Académicos\n` +
           `- Convocatorias y eventos institucionales\n\n` +
@@ -320,10 +319,6 @@ class MessageHandler {
               state.cedula // Lo usamos como código también
             );
           }
-
-          // Opcional: si luego quieres login y token
-          // const login = await userService.loginUser(state.email, state.cedula);
-          // const token = login.token;
           const advisory = await advisoryService.findOneByAdvisorAndDay(
             state.advisor.advisorCode,
             state.selectedDay,
@@ -402,7 +397,7 @@ class MessageHandler {
   
       try {
         if (state.step === "question") {
-          const pdfText = await loadPDFContent("./src/docs/bienestar.pdf"); // Ajusta si cambia la ruta
+          const pdfText = await loadPDFContent("./src/docs/Información bienestar universitario BienestarBot.pdf"); // Ajusta si cambia la ruta
           responseMessage = await askGemini(message, pdfText);
         }
   

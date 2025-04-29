@@ -30,6 +30,45 @@ exports.getSchedules = async () => {
   }
 };
 
+exports.getGroupedByTime = async () => {
+  const schedules = await Schedule.find()
+    .populate({
+      path: "AdvisoryId",
+      select: "dateStart day",
+    })
+    .populate({
+      path: "studentId",
+      select: "name",
+    });
+
+  const grouped = {};
+
+  schedules.forEach(schedule => {
+    const advisory = schedule.AdvisoryId;
+    const student = schedule.studentId;
+
+    if (!advisory || !student) return;
+
+    const date = new Date(advisory.dateStart);
+    const hour = date.toISOString().substring(11, 16); // formato "HH:MM"
+    const day = advisory.day;
+
+    const key = `${day}-${hour}`;
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        day,
+        time: hour,
+        students: [],
+      };
+    }
+
+    grouped[key].students.push(student.name);
+  });
+
+  return Object.values(grouped);
+};
+
 exports.getScheduleById = async (scheduleId) => {
   try {
     const schedule = await Schedule.findById(scheduleId);

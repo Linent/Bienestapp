@@ -9,12 +9,12 @@ exports.createAdvisory = async (req, res) => {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
 
-    const { advisorId, careerId, dateStart, dateEnd,  status } = req.body;
-    if (!advisorId || !careerId || !dateStart || !dateEnd ) {
+    const { advisorId, careerId, dateStart, day,status } = req.body;
+    if (!advisorId || !careerId || !dateStart || !day  ) {
       return handlerError(res, 400, errorsConstants.inputRequired);
     }
 
-    const advisory = await advisoryService.createAdvisory(advisorId, careerId, dateStart, dateEnd,  status);
+    const advisory = await advisoryService.createAdvisory(advisorId, careerId, dateStart, day, status);
     return res.status(201).send(advisory);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);

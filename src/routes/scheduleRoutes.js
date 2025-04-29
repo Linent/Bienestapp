@@ -10,6 +10,9 @@ router.get("/schedules-by-topic", Auth, scheduleController.getSchedulesByTopic);
 router.get("/schedules-by-month", Auth, scheduleController.getSchedulesByMonth);
 router.get("/schedules-by-day", Auth, scheduleController.getSchedulesByDay);
 router.get("/schedules-by-year", Auth, scheduleController.getSchedulesByYear);
+// routes/schedule.js o advisory.js
+router.get("/grouped-by-time", Auth,scheduleController.groupByTime);
+
 // Schedule Reports
 router.post("/create", Auth, scheduleController.createSchedule);
 router.get("/", Auth, scheduleController.getSchedules);

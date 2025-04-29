@@ -20,7 +20,15 @@ exports.createSchedule = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
-
+exports.groupByTime = async (req, res) => {
+  try {
+    const groupedSchedules = await ScheduleService.getGroupedByTime();
+    return res.status(200).send(groupedSchedules);
+  } catch (error) {
+    console.error(error);
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
 // Obtener todos los registros de horarios
 exports.getSchedules = async (req, res) => {
   try {

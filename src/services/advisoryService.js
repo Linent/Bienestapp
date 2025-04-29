@@ -9,44 +9,47 @@ class AdvisoryService {
     advisorId,
     careerId,
     dateStart,
-    dateEnd,
-    status 
+    day,
+    status
   ) {
-      const advisor = await userService.getUserById(advisorId);
-      if (!advisor || advisor.role !== "academic_friend") {
-          throw new Error(errorsConstants.unauthorized);
-      }
+    const advisor = await userService.getUserById(advisorId);
+    if (!advisor || advisor.role !== "academic_friend") {
+      throw new Error(errorsConstants.unauthorized);
+    }
   
-      const Day = moment(dateStart).locale('es').format('dddd');
-      // Calcular duración en horas de la asesoría
-      const start = new Date(dateStart);
-      const end = new Date(dateEnd);
-      const durationHours = (end - start) / (1000 * 60 * 60); // Convertir ms a horas
+    const days = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+    if (!days.includes(day.toLowerCase())) {
+      throw new Error("El día de la semana no es válido.");
+    }
   
-      // Si al sumar las horas supera 20, no se permite
-      if (advisor.availableHours + durationHours > 20) {
-          throw new Error("El asesor no puede exceder las 20 horas disponibles.");
-      }
+    // Calcular fecha de finalización (2 horas después del inicio)
+    const start = new Date(dateStart);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2 horas en milisegundos
   
-      // Crear la asesoría con el estado definido
-      const newAdvisory = new Advisory({
-          advisorId,
-          careerId,
-          dateStart,
-          dateEnd,
-          day: Day,
-          status,
-      });
-      
-      // Sumar las horas de la asesoría a las horas disponibles del asesor
-      const horasAcumuladas = advisor.availableHours + durationHours;
-      await userService.updateUser(advisorId, { availableHours: horasAcumuladas });
+    const durationHours = (end - start) / (1000 * 60 * 60); // Esto ahora será siempre 2 horas
   
-      const advisoryCreate = await newAdvisory.save();
-        
-      return advisoryCreate;
+    // Validar que el asesor no exceda las 20 horas disponibles
+    if (advisor.availableHours + durationHours > 20) {
+      throw new Error("El asesor no puede exceder las 20 horas disponibles.");
+    }
   
+    // Crear la asesoría con la fecha de finalización calculada
+    const newAdvisory = new Advisory({
+      advisorId,
+      careerId,
+      dateStart: start,
+      dateEnd: end,
+      day,
+      status,
+    });
   
+    // Sumar las horas de la asesoría a las horas disponibles del asesor
+    const horasAcumuladas = advisor.availableHours + durationHours;
+    await userService.updateUser(advisorId, { availableHours: horasAcumuladas });
+  
+    const advisoryCreate = await newAdvisory.save();
+  
+    return advisoryCreate;
   }
   async getAllAdvisory() {
     try {
