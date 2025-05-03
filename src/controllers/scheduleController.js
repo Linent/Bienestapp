@@ -20,10 +20,19 @@ exports.createSchedule = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
-exports.groupByTime = async (req, res) => {
+exports.getStudentsByAdvisory = async (req, res) => {
   try {
-    const groupedSchedules = await ScheduleService.getGroupedByTime();
-    return res.status(200).send(groupedSchedules);
+    const { advisoryId, day, dateStart } = req.query;
+
+    if (!advisoryId || !day || !dateStart) {
+      return handlerError(res, 400, errorsConstants.inputRequired);
+    }
+
+    const students = await ScheduleService.getStudentsByAdvisorAndDate(advisoryId, day, dateStart);
+    if(!students || students.length === 0) {
+      return handlerError(res, 400, errorsConstants.schedulesEmpty);
+    }
+    res.status(200).send(students);
   } catch (error) {
     console.error(error);
     return handlerError(res, 500, errorsConstants.serverError);
@@ -111,11 +120,12 @@ exports.deleteSchedule = async (req, res) => {
 
 exports.updateAttendance = async (req, res) => {
   try {
-      const { scheduleId, attendanceStatus } = req.body;
-      const schedule = await ScheduleService.updateAttendance(scheduleId, attendanceStatus);
-      return res.status(200).send(schedule);
+    const { scheduleId, attendanceStatus } = req.body;
+
+    const schedule = await ScheduleService.updateAttendance(scheduleId, attendanceStatus);
+    return res.status(200).send(schedule);
   } catch (error) {
-      return handlerError(res, 400, error.message);
+    return handlerError(res, 400, error.message);
   }
 }; 
 

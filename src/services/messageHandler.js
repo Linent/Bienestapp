@@ -190,9 +190,9 @@ class MessageHandler {
             advisors
               .map(
                 (a, i) =>
-                  `👤 *${a.name}*\n📧 ${a.email}\n🆔 Código: *${
+                  `👤 *${a.name}*\n📧 ${a.email}\n🆔 Código: ${
                     a.codigo
-                  }*\n🕐 Horarios:\n${a.horarios
+                  }\n🕐 Horarios:\n${a.horarios
                     .map((h) => `- ${h}`)
                     .join("\n")}`
               )

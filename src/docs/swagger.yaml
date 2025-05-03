@@ -467,14 +467,37 @@ paths:
           description: Asesoría eliminada correctamente
         '404':
           description: Asesoría no encontrada
-  /advisory/grouped-by-time:
+  /schedules/students-by-advisory:
     get:
-      summary: Obtener estudiantes agrupados por día y hora de asesorías
+      summary: Obtener estudiantes agendados para una asesoría por asesor y fecha exacta
       tags:
-        - Advisory
+        - Schedule
+      parameters:
+        - name: advisoryId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: ID del asesor académico (amigo académico)
+          example: "67ec7245138ae227d86ecb59"
+        - name: day
+          in: query
+          required: true
+          schema:
+            type: string
+          description: día
+          example: "lunes"
+        - name: dateStart
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: hora de la asesoría
+          example: "13:00"
       responses:
         "200":
-          description: Lista agrupada de estudiantes por día y hora
+          description: Lista de estudiantes agendados en esa asesoría
           content:
             application/json:
               schema:
@@ -482,20 +505,20 @@ paths:
                 items:
                   type: object
                   properties:
-                    day:
+                    studentName:
                       type: string
-                      description: Día de la semana en que se realiza la asesoría (ejemplo: lunes, martes)
-                      example: lunes
-                    time:
+                      example: Johan Ibarra
+                    email:
                       type: string
-                      description: Hora de inicio de la asesoría en formato 24 horas (HH:MM)
-                      example: "08:00"
-                    students:
-                      type: array
-                      description: Lista de nombres de estudiantes agendados a esa hora
-                      items:
-                        type: string
-                        example: Johan Ibarra
+                      example: johan@ufps.edu.co
+                    topic:
+                      type: string
+                      example: Proyecto de grado
+                    status:
+                      type: string
+                      example: pending
+        "400":
+          description: advisorId o dateStart faltante o inválido
         "500":
           description: Error interno del servidor
   /schedules/students/today:
@@ -610,7 +633,33 @@ paths:
           description: No se encontraron asesorías
         "500":
           description: Error interno del servidor
-
+  /schedules/update-attendance:
+    put:
+      summary: Actualizar el estado de asistencia de una asesoría
+      tags:
+        - Schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                studentId:
+                  type: string
+                  description: ID del registro de asistencia
+                  example: "67d4df03e1711993d1edd37b"
+                attendanceStatus:
+                  type: Boolean
+                  description: asistio o no asistio a la asesoría
+                  example: true
+      responses:
+        "200":
+          description: Estado de asistencia actualizado con éxito
+        "400":
+          description: Datos inválidos o faltantes
+        "404":
+          description: Registro de asistencia no encontrado
   /advisory/report/last7days:
     get:
       summary: Obtener el reporte de asesorías de los últimos 7 días

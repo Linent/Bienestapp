@@ -27,6 +27,8 @@ const errorsConstants = {
   schedulesNotUpdate: 'schedules.Not.Update',
   openAiError: 'openAi.error',
   userNotEnabled: 'errors.user_not_enabled',
+  schedulesEmpty: 'schedules.is_empty',
+  schedulesNotFound: 'schedules.not_found',
 };
 
 module.exports = {

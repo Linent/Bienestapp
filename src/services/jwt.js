@@ -10,7 +10,7 @@ class JwtService {
   }
 
   // Generar token
-  generateToken(payload, expiresIn = "2h") {
+  generateToken(payload, expiresIn = "3h") {
     return jwt.sign(payload, this.secretKey, { expiresIn });
   }
    // Verificar token (si es inválido, lanza error en lugar de devolver null)

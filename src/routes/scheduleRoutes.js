@@ -4,14 +4,15 @@ const router = express.Router();
 const Auth = require("../middlewares/authMiddleware");
 
 
+router.get("/students-by-advisory", Auth, scheduleController.getStudentsByAdvisory);
 router.get("/schedules-by-advisor", Auth, scheduleController.getSchedulesByAdvisor);
 router.get("/attendance-per-schedule", Auth, scheduleController.getAttendancePerSchedule);
 router.get("/schedules-by-topic", Auth, scheduleController.getSchedulesByTopic);
 router.get("/schedules-by-month", Auth, scheduleController.getSchedulesByMonth);
 router.get("/schedules-by-day", Auth, scheduleController.getSchedulesByDay);
 router.get("/schedules-by-year", Auth, scheduleController.getSchedulesByYear);
+router.put("/update-attendance", Auth, scheduleController.updateAttendance);
 // routes/schedule.js o advisory.js
-router.get("/grouped-by-time", Auth,scheduleController.groupByTime);
 
 // Schedule Reports
 router.post("/create", Auth, scheduleController.createSchedule);

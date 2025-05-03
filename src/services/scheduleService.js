@@ -1,21 +1,36 @@
 const Schedule = require("../models/Schedule");
 const Advisory = require("../models/Advisory");
+const { getNextMatchingDate } = require("../helpers/dateHelper");
+const { DateTime } = require("luxon");
+
 
 exports.createSchedule = async (studentId, topic, advisoryId) => {
   try {
-    const advisoryExists = await Advisory.findById(advisoryId);
-    if (!advisoryExists) {
-      throw new Error("No se encontro al asesor");
+    const advisory = await Advisory.findById(advisoryId);
+    if (!advisory) {
+      throw new Error("No se encontró la asesoría.");
     }
+
+    // Extrae el día y la hora desde el dateStart de la asesoría
+    const advisoryDay = advisory.day;
+    const advisoryHour = DateTime
+      .fromJSDate(advisory.dateStart, { zone: "utc" })
+      .toFormat("HH:mm");
+
+    // Usa el helper
+    const nextDate = getNextMatchingDate(advisoryDay, advisoryHour);
+    console.log("➡ Próxima fecha sugerida:", nextDate.toISO());
+
     const newSchedule = new Schedule({
       studentId,
       topic,
       AdvisoryId: advisoryId,
+      dateStart: nextDate.toJSDate(), // opcional, si lo quieres guardar
     });
-    const newScheduleSucces = await newSchedule.save();
-    return newScheduleSucces;
+
+    return await newSchedule.save();
   } catch (error) {
-    throw new Error("Error creando al agendar: " + error.message);
+    throw new Error("Error al agendar: " + error.message);
   }
 };
 //{ path:'AdvisoryId', select: 'advisorId ' }
@@ -30,43 +45,28 @@ exports.getSchedules = async () => {
   }
 };
 
-exports.getGroupedByTime = async () => {
-  const schedules = await Schedule.find()
-    .populate({
-      path: "AdvisoryId",
-      select: "dateStart day",
-    })
+exports.getStudentsByAdvisorAndDate = async (advisoryId, day, dateStart) => {
+  const advisorySchedules = await Schedule.find({ AdvisoryId: advisoryId })
+    .populate({ path: "AdvisoryId", select: "dateStart day" })
     .populate({
       path: "studentId",
-      select: "name",
+      select: "name codigo email career",
+      populate: { path: "career", select: "name" },
     });
 
-  const grouped = {};
-
-  schedules.forEach(schedule => {
-    const advisory = schedule.AdvisoryId;
-    const student = schedule.studentId;
-
-    if (!advisory || !student) return;
-
-    const date = new Date(advisory.dateStart);
-    const hour = date.toISOString().substring(11, 16); // formato "HH:MM"
-    const day = advisory.day;
-
-    const key = `${day}-${hour}`;
-
-    if (!grouped[key]) {
-      grouped[key] = {
-        day,
-        time: hour,
-        students: [],
-      };
-    }
-
-    grouped[key].students.push(student.name);
+    const filteredSchedules = advisorySchedules.filter((schedule) => {
+      const advisory = schedule.AdvisoryId;
+      if (!advisory || !schedule.dateStart) return false;
+    
+      const advisoryDay = advisory.day.toLowerCase();
+    
+      const scheduleMillis = DateTime.fromJSDate(schedule.dateStart).toUTC().startOf("minute").toMillis();
+      const queryMillis = DateTime.fromISO(dateStart).toUTC().startOf("minute").toMillis();
+    
+      return advisoryDay === day.toLowerCase() && scheduleMillis === queryMillis;
   });
 
-  return Object.values(grouped);
+  return filteredSchedules;
 };
 
 exports.getScheduleById = async (scheduleId) => {
@@ -101,14 +101,13 @@ exports.deleteSchedule = async (scheduleId) => {
 };
 
 exports.updateAttendance = async (scheduleId, attendanceStatus) => {
-  const schedule = await Schedule.findById(scheduleId);
-  if (!schedule) {
-      throw new Error(errorsConstants.notFound);
-  }
+  const schedule = await Schedule.findByIdAndUpdate(
+    scheduleId,
+    { attendance: attendanceStatus },
+    { new: true }
+  );
 
-  schedule.attendance = attendanceStatus;
-  schedule.status = attendanceStatus ? 'completed' : 'pending';
-  await schedule.save();
+  if (!schedule) throw new Error("No se encontró el schedule");
 
   return schedule;
 };
@@ -207,9 +206,26 @@ exports.getAttendedSchedulesByAdvisor = async () => {
 // Obtener promedio de asistencia por asesoría
 exports.getAttendancePerSchedule = async () => {
   return await Schedule.aggregate([
-    { $group: { _id: "$AdvisoryId", averageAttendance: { $avg: { $cond: ["$attendance", 1, 0] } } } }
+    {
+      $group: {
+        _id: "$AdvisoryId",
+        attendanceRate: {
+          $avg: {
+            $cond: ["$attendance", 1, 0]
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        advisoryId: "$_id",
+        attendanceRate: 1
+      }
+    }
   ]);
 };
+
 
 // Obtener cantidad de asesorías por tema
 exports.getSchedulesByTopic = async () => {

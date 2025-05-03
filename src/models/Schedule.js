@@ -19,6 +19,7 @@ const scheludeShema = new mongoose.Schema(
       ref: "Advisory",
       required: true,
     },
+    dateStart: { type: Date, required: true }, // Fecha y hora de inicio de la asesoría
   },
   { timestamps: true }
 );
