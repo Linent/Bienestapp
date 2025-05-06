@@ -55,7 +55,7 @@ exports.getAdvisoryById = async (req, res) => {
     if (!advisory) {
       return handlerError(res, 404, errorsConstants.notFound);
     }
-    if (req.user.role !== "admin" && req.user.id.toString() !== advisory.advisorId._id.toString()) {
+    if (req.user.role !== "admin" && req.user.id.toString() !== advisory.advisorId.id.toString()) {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
 
@@ -115,12 +115,12 @@ exports.deleteAdvisory = async (req, res) => {
 exports.getAdvisoriesByAdvisor = async (req, res) => {
   try {
     const { advisorId } = req.params;
-    console.log(advisorId);
+    console.log(req.user.id);
     if (!advisorId) {
       return handlerError(res, 400, errorsConstants.inputIdRequired);
     }
 
-    if ((req.user.role !=='academic_friend' || req.user.role !== "admin") && req.user._id.toString() !== advisorId) {
+    if ( req.user.role !== "admin" && req.user.id.toString() !== advisorId) {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
 
