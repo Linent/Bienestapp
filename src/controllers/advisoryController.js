@@ -10,6 +10,7 @@ exports.createAdvisory = async (req, res) => {
     }
 
     const { advisorId, careerId, dateStart, day } = req.body;
+    
     if (!advisorId || !careerId || !dateStart || !day  ) {
       return handlerError(res, 400, errorsConstants.inputRequired);
     }
@@ -55,7 +56,8 @@ exports.getAdvisoryById = async (req, res) => {
     if (!advisory) {
       return handlerError(res, 404, errorsConstants.notFound);
     }
-    if (req.user.role !== "admin" && req.user.id.toString() !== advisory.advisorId.id.toString()) {
+    const usersValid = ["admin", "academic_friend"];
+    if (!usersValid.includes(req.user.role) && req.user.id.toString() !== advisory.advisorId.id.toString()) {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
 
@@ -115,7 +117,6 @@ exports.deleteAdvisory = async (req, res) => {
 exports.getAdvisoriesByAdvisor = async (req, res) => {
   try {
     const { advisorId } = req.params;
-    console.log(req.user.id);
     if (!advisorId) {
       return handlerError(res, 400, errorsConstants.inputIdRequired);
     }
