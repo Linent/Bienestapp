@@ -9,8 +9,7 @@ class AdvisoryService {
     advisorId,
     careerId,
     dateStart,
-    day,
-    status
+    day
   ) {
     const advisor = await userService.getUserById(advisorId);
     if (!advisor || advisor.role !== "academic_friend") {
@@ -40,7 +39,6 @@ class AdvisoryService {
       dateStart: start,
       dateEnd: end,
       day,
-      status,
     });
   
     // Sumar las horas de la asesoría a las horas disponibles del asesor

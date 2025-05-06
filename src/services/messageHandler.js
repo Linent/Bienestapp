@@ -1,11 +1,11 @@
-const  advisoryService = require("./advisoryService");
-const  whatsappService = require("./whatsappService");
-const  userService = require("./userService");
-const  scheduleService = require("./scheduleService");
-const  careerService = require("./CareerService");
-const  openAiService = require("./openAiService");
-const  { loadPDFContent } = require("../utils/loadPdfContent");
-const  askGemini = require("./geminiService");
+const advisoryService = require("./advisoryService");
+const whatsappService = require("./whatsappService");
+const userService = require("./userService");
+const scheduleService = require("./scheduleService");
+const careerService = require("./CareerService");
+const openAiService = require("./openAiService");
+const { loadPDFContent } = require("../utils/loadPdfContent");
+const askGemini = require("./geminiService");
 
 class MessageHandler {
   constructor() {
@@ -33,7 +33,6 @@ class MessageHandler {
         }
 
         await whatsappService.markAsRead(message.id);
-
       } else if (message?.type === "interactive") {
         const selectedOption = message.interactive?.button_reply?.title
           ?.toLowerCase()
@@ -55,9 +54,13 @@ class MessageHandler {
 
   // ✅ Saludo simple
   isGreeting(message) {
-    return ["hola", "buenos días", "buenas tardes", "buenas noches", "quiero saber algo"].includes(
-      message
-    );
+    return [
+      "hola",
+      "buenos días",
+      "buenas tardes",
+      "buenas noches",
+      "quiero saber algo",
+    ].includes(message);
   }
 
   getSenderName(senderInfo) {
@@ -71,7 +74,7 @@ class MessageHandler {
       .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1))
       .join(" ");
   }
-   // ✅ Maneja botones después de una respuesta: "Sí, gracias" / "Hacer otra pregunta"
+  // ✅ Maneja botones después de una respuesta: "Sí, gracias" / "Hacer otra pregunta"
   async handleAssistandFeedback(to, selectedOption) {
     let responseMessage;
 
@@ -95,8 +98,8 @@ class MessageHandler {
 
     await whatsappService.sendMessage(to, responseMessage);
   }
-   // ✅ Enviar mensaje de bienvenida
-   async sendWelcome(to, msgId, senderInfo) {
+  // ✅ Enviar mensaje de bienvenida
+  async sendWelcome(to, msgId, senderInfo) {
     const name = this.capitalizarTexto(this.getSenderName(senderInfo)).split(
       " "
     )[0];
@@ -163,12 +166,11 @@ class MessageHandler {
     const type = "document";
     await whatsappService.sendMediaMessage(to, type, mediaUrl, caption);
   }
-  
+
   async handleAppointmentFlow(to, message) {
     const state = this.appointmentState[to] || { step: "showAdvisors" };
     let responseMessage;
 
-    // Manejo especial para iniciar flujo desde el menú
     if (state.step === "showAdvisors" && message === null) {
       message = "";
     }
@@ -190,15 +192,10 @@ class MessageHandler {
             advisors
               .map(
                 (a, i) =>
-                  `👤 *${a.name}*\n📧 ${a.email}\n🆔 Código: ${
-                    a.codigo
-                  }\n🕐 Horarios:\n${a.horarios
-                    .map((h) => `- ${h}`)
-                    .join("\n")}`
+                  `👤 *${a.name}*\n📧 ${a.email}\n🆔 Código: ${a.codigo}\n`
               )
               .join("\n\n") +
             `\n\n✍️ Escribe el código del asesor con el que deseas agendar.`;
-
           break;
         }
 
@@ -236,25 +233,23 @@ class MessageHandler {
           state.selectedDay = message.trim().toLowerCase();
           state.step = "selectHour";
 
-          // Buscar horarios disponibles para ese día
           const dayHorarios = state.advisor.horarios.filter((h) =>
             h.toLowerCase().startsWith(state.selectedDay)
           );
 
           const horasDisponibles = dayHorarios.map((h) => {
-            const hora = h.split(" - "); // ejemplo: "miércoles 08:00 - 12:00"
+            const hora = h.split(" - ");
             return hora.length > 1 ? hora[1].trim() : "Hora no definida";
           });
 
           responseMessage =
             `⏰ Ingresa la *hora* en la que deseas agendar tu asesoría (formato 24h, ej: 14:00).\n\n` +
-            `📆 *Día:* ${state.selectedDay}\n🕐 *Franja:* ${dayHorarios.join(
-              "\n"
-            )}`;
+            `📆 *Día:* ${state.selectedDay}\n🕐 *Franja:* \n` +
+            dayHorarios.map((h) => `• ${h}`).join("\n");
           break;
         }
+
         case "selectHour": {
-          // Validar que sea una hora con formato HH:mm
           const isValid = /^\d{2}:\d{2}$/.test(message.trim());
           if (!isValid) {
             responseMessage =
@@ -267,6 +262,7 @@ class MessageHandler {
           responseMessage = "📝 ¿Cuál es el tema de la asesoría?";
           break;
         }
+
         case "topic": {
           state.topic = message.trim();
           state.step = "email";
@@ -276,21 +272,31 @@ class MessageHandler {
 
         case "email": {
           state.email = message.trim().toLowerCase();
-          state.step = "codigoCarrera";
+          state.step = "codigoEstudiante";
           responseMessage =
-            "🏫 Ingresa el *código de tu carrera* para asociarte correctamente.";
+            "🎓 Ingresa tu *código de estudiante* (Ej: 1012345678).";
           break;
         }
 
-        case "codigoCarrera": {
-          const career = await careerService.findByCode(message.trim());
-          if (!career) {
+        case "codigoEstudiante": {
+          const codigoEstudiante = message.trim();
+
+          if (!/^\d{3,}$/.test(codigoEstudiante)) {
             responseMessage =
-              "❌ Código de carrera no válido. Intenta de nuevo.";
+              "❌ Código de estudiante no válido. Intenta de nuevo.";
+            break;
+          }
+
+          const codigoCarrera = codigoEstudiante.substring(0, 3);
+          const career = await careerService.findByCode(codigoCarrera);
+
+          if (!career) {
+            responseMessage = `❌ No se encontró una carrera con el código ${codigoCarrera}. Intenta de nuevo.`;
             break;
           }
 
           state.career = career._id;
+          state.studentCode = codigoEstudiante;
           state.step = "cedula";
           responseMessage = "🆔 Ingresa tu número de cédula.";
           break;
@@ -306,19 +312,18 @@ class MessageHandler {
         case "name": {
           state.name = message.trim();
 
-          // Verificar si el usuario existe
           let student = await userService.findByEmail(state.email);
           if (!student) {
-            // Crear usuario si no existe
             student = await userService.registerUser(
               state.name,
               state.email,
               state.cedula,
               "student",
               state.career,
-              state.cedula // Lo usamos como código también
+              state.studentCode
             );
           }
+
           const advisory = await advisoryService.findOneByAdvisorAndDay(
             state.advisor.advisorCode,
             state.selectedDay,
@@ -358,6 +363,7 @@ class MessageHandler {
       delete this.appointmentState[to];
     }
   }
+
   /* async handleAssistandFlow(to, message) {
     const state = this.assistandState[to];
     let responseMessage; 
@@ -380,37 +386,39 @@ class MessageHandler {
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
     await whatsappService.markAsRead(message.id);
   } */
-    async handleAssistandFlow(to, message) {
-      const state = this.assistandState[to];
-      let responseMessage;
-      const menuMessage = "¿La respuesta fue de tu ayuda?";
-      const buttons = [
-        {
-          type: "reply",
-          reply: { id: "option_4", title: "Sí, gracias" },
-        },
-        {
-          type: "reply",
-          reply: { id: "option_5", title: "Hacer otra pregunta" },
-        },
-      ];
-  
-      try {
-        if (state.step === "question") {
-          const pdfText = await loadPDFContent("./src/docs/Información bienestar universitario BienestarBot.pdf"); // Ajusta si cambia la ruta
-          responseMessage = await askGemini(message, pdfText);
-        }
-  
-        await whatsappService.sendMessage(to, responseMessage);
-        await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
-      } catch (error) {
-        console.error("Error en handleAssistandFlow con Gemini:", error);
-        await whatsappService.sendMessage(
-          to,
-          "Lo sentimos, ocurrió un error al procesar tu consulta."
-        );
+  async handleAssistandFlow(to, message) {
+    const state = this.assistandState[to];
+    let responseMessage;
+    const menuMessage = "¿La respuesta fue de tu ayuda?";
+    const buttons = [
+      {
+        type: "reply",
+        reply: { id: "option_4", title: "Sí, gracias" },
+      },
+      {
+        type: "reply",
+        reply: { id: "option_5", title: "Hacer otra pregunta" },
+      },
+    ];
+
+    try {
+      if (state.step === "question") {
+        const pdfText = await loadPDFContent(
+          "./src/docs/Información bienestar universitario BienestarBot.pdf"
+        ); // Ajusta si cambia la ruta
+        responseMessage = await askGemini(message, pdfText);
       }
+
+      await whatsappService.sendMessage(to, responseMessage);
+      await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+    } catch (error) {
+      console.error("Error en handleAssistandFlow con Gemini:", error);
+      await whatsappService.sendMessage(
+        to,
+        "Lo sentimos, ocurrió un error al procesar tu consulta."
+      );
     }
+  }
 }
 
 module.exports = new MessageHandler();

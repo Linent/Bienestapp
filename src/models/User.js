@@ -8,7 +8,8 @@ const userSchema =  new mongoose.Schema(
       career: { type: mongoose.Schema.Types.ObjectId, ref: 'Career' },
       role: { type: String, enum: ['student', 'academic_friend', 'admin'] },
       enable: { type: Boolean, default: true },
-      availableHours: { type: Number, default: 0, max: 20 } // Máximo 20 horas disponibles
+      availableHours: { type: Number, default: 0, max: 20 }, // Máximo 20 horas disponibles
+      delete: { type: Boolean, default: false }, // Si el usuario está eliminado o no
     },
     {
       timestamps: true  

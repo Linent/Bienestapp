@@ -94,6 +94,23 @@ const updateUser = async (req, res) => {
   }
 };
 
+const deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const loggedUser = req.user;
+    const { deleteStatus } = req.body; 
+    if (loggedUser.role !== "admin") {
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
+
+    const deletedUser = await userService.deleteUser(userId, deleteStatus);
+    if (!deletedUser) return handlerError(res, 404, errorsConstants.userNotFound);
+
+    res.status(200).send({ success: true, message: "Usuario eliminado correctamente." });
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
 // Habilitar o deshabilitar usuario (solo admin puede hacerlo)
 const disableUser = async (req, res) => {
   try {
@@ -175,4 +192,5 @@ module.exports = {
   sendWelcomeEmail,
   forgotPassword,
   recoveryPassword,
+  deleteUser,
 };

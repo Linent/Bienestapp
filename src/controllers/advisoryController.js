@@ -9,12 +9,12 @@ exports.createAdvisory = async (req, res) => {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
 
-    const { advisorId, careerId, dateStart, day,status } = req.body;
+    const { advisorId, careerId, dateStart, day } = req.body;
     if (!advisorId || !careerId || !dateStart || !day  ) {
       return handlerError(res, 400, errorsConstants.inputRequired);
     }
 
-    const advisory = await advisoryService.createAdvisory(advisorId, careerId, dateStart, day, status);
+    const advisory = await advisoryService.createAdvisory(advisorId, careerId, dateStart, day );
     return res.status(201).send(advisory);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
@@ -115,11 +115,12 @@ exports.deleteAdvisory = async (req, res) => {
 exports.getAdvisoriesByAdvisor = async (req, res) => {
   try {
     const { advisorId } = req.params;
+    console.log(advisorId);
     if (!advisorId) {
       return handlerError(res, 400, errorsConstants.inputIdRequired);
     }
 
-    if (req.user.role !== "admin" && req.user._id.toString() !== advisorId) {
+    if ((req.user.role !=='academic_friend' || req.user.role !== "admin") && req.user._id.toString() !== advisorId) {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
 

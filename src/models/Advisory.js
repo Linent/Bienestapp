@@ -7,13 +7,10 @@ const advisorySchema = new mongoose.Schema(
     day: { type: String, enum: ['lunes', 'martes', 'miércoles', 'jueves', 'viernes'], required: true },
     dateStart: { type: Date, required: true }, // Fecha y hora de la asesoría
     dateEnd: { type: Date, required: true }, //Fecha de la finalización de la asesoría
-    status: { type: String, enum: ["pending", "approved", "canceled"], default: "pending" }, // Estado de la asesoría
+    status: { type: String, enum: ["pending", "approved", "canceled"], default: "approved" }, // Estado de la asesoría
     recurring: { type: Boolean, default: true }, // Si la asesoría es recurrente o no
   },
   { timestamps: true }
 );
 
 module.exports =  mongoose.model("Advisory", advisorySchema);
-
-//attendance: { type: Boolean, default: false }, // Si el estudiante asistió o no
-//student: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Estudiante que solicita la asesoría

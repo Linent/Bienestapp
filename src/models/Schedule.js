@@ -11,8 +11,8 @@ const scheludeShema = new mongoose.Schema(
     attendance: { type: Boolean, default: false }, // Si el estudiante asistió o no
     status: {
       type: String,
-      enum: ["pending", "completed", "canceled"],
-      default: "pending",
+      enum: ["approved","pending", "completed", "canceled"],
+      default: "approved",
     },
     AdvisoryId: {
       type: mongoose.Schema.Types.ObjectId,

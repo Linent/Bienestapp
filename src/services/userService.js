@@ -51,7 +51,7 @@ exports.loginUser = async (email, password) => {
 };
 
 exports.getAllUsers = async () => {
-  return await User.find()
+  return await User.find({ delete: false })
   .populate({path: "career", select: "name"})
   .select("-password");
 };
@@ -60,15 +60,28 @@ exports.getUserById = async (id) => {
   return await User.findById(id)
   .populate({path: "career", select: "name"});
 };
+exports.deleteUser = async (id) => {
+  const user = await User.findByIdAndUpdate(id, { delete: true }, { new: true });
+  if (!user) {
+    throw new Error(errorsConstants.userNotFound);
+  }
+  return user;
+}
 
 exports.updateUser = async (id, data) => {
-  
+  // Si viene la contraseña, la codificamos
+  if (data.password) {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    data.password = hashedPassword;
+  }
   return await User.findByIdAndUpdate(id, data, { new: true }).select("-password");
 };
 
 exports.disableUser = async (id, enable) => {
   return await User.findByIdAndUpdate(id, { enable }, { new: true });
 }; 
+
+
 
 exports.sendWelcomeEmail = async (userId) => {
 try{
