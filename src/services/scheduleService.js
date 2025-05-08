@@ -39,7 +39,7 @@ exports.getSchedules = async () => {
       .populate({ path: "studentId", select: "name codigo email" })
       .populate({
         path: "AdvisoryId",
-        select: "advisorId careerId dateStart",
+        select: "advisorId careerId day",
         populate: {
           path: "advisorId careerId",
           select: "name enable codigo code",

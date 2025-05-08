@@ -54,7 +54,7 @@ exports.getAdvisoryById = async (req, res) => {
     }
     const advisory = await advisoryService.getAdvisoryById(advisoryId);
     if (!advisory) {
-      return handlerError(res, 404, errorsConstants.notFound);
+      return handlerError(res, 404, errorsConstants.advisoryEmpty);
     }
     const usersValid = ["admin", "academic_friend"];
     if (!usersValid.includes(req.user.role) && req.user.id.toString() !== advisory.advisorId.id.toString()) {
@@ -89,6 +89,26 @@ exports.updateAdvisory = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
+
+exports.updateAdvisoryStatus = async (req, res) => {
+  try {
+    const { advisoryId } = req.params;
+    if (!advisoryId) {
+      return handlerError(res, 400, errorsConstants.inputIdRequired);
+    }
+    const { status } = req.body;
+
+    const updatedAdvisory = await advisoryService.updateAdvisoryStatus(advisoryId, status);
+    if (!updatedAdvisory) {
+      return handlerError(res, 404, errorsConstants.advisoryNotUpdate);
+    }
+
+    res.status(200).send(updatedAdvisory);
+  }
+  catch(error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+}
 
 // 📌 Eliminar asesoría (solo admin)
 exports.deleteAdvisory = async (req, res) => {

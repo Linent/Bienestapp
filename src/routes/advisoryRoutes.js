@@ -9,6 +9,7 @@ router.get("/advisor/:advisorId", Auth, advisoryController.getAdvisoriesByAdviso
 router.get("/", Auth, advisoryController.getAllAdvisories);
 router.get("/:advisoryId", Auth, advisoryController.getAdvisoryById);
 router.put("/:advisoryId", Auth, advisoryController.updateAdvisory);
+router.put("/updateStatus/:advisoryId", Auth, advisoryController.updateAdvisoryStatus);
 router.delete("/:advisoryId", Auth, advisoryController.deleteAdvisory);
 
 // Obtener asesorías agendadas para un asesor

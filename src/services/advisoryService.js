@@ -89,6 +89,19 @@ class AdvisoryService {
       throw handlerError("Error al actualizar la asesoría: " + error.message);
     }
   }
+  async updateAdvisoryStatus(advisoryId, status) {
+    try {
+      const advisoryUpdate = await Advisory.findByIdAndUpdate(
+        advisoryId,{ $set: { status } },
+        {
+          new: true,
+        }
+      );
+      return advisoryUpdate;
+    } catch (error) {
+      throw handlerError("Error al actualizar la asesoría: " + error.message);
+    }
+  }
   async deleteAdvisory(advisoryId) {
     try {
       const advisory = await Advisory.findByIdAndDelete(advisoryId);
