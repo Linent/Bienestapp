@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require("cors");
 const morgan = require("morgan");
 const helmet = require("helmet");
+const fileUpload = require("express-fileupload");
+const path = require("path");
 
 // Rutas
 const careerRouter = require("./routes/careerRoutes.js");
@@ -9,6 +11,7 @@ const advisoryRouter = require("./routes/advisoryRoutes.js");
 const userRouter = require("./routes/userRoutes.js");
 const scheduleRouter = require('./routes/scheduleRoutes.js');
 const whatsappRoutes = require("./routes/whatsappRoutes.js");
+const topicRouter = require("./routes/topicRoutes.js");
 
 // Swagger
 const swaggerUi = require('swagger-ui-express');
@@ -23,6 +26,13 @@ app.use(cors());
 app.use(helmet());
 app.use(express.json());
 
+// 👉 habilita express-fileupload
+app.use(fileUpload());
+
+// 👉 sirve archivos de la carpeta uploads
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+
 // Mostrar logs solo en desarrollo
 if (config.NODE_ENV !== 'production') {
   app.use(morgan("dev"));
@@ -34,8 +44,9 @@ app.use('/career', careerRouter);
 app.use('/schedules', scheduleRouter);
 app.use('/advisory', advisoryRouter);
 app.use('/user', userRouter);
+app.use('/topics', topicRouter);
 
-// Swagger disponible en todos los entornos
+// Swagger
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Ruta de prueba
@@ -53,4 +64,3 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
-

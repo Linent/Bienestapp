@@ -7,7 +7,7 @@ module.exports = {
     MONGODB_URI: process.env.MONGODB_URI || "",
     SECRET_KEY: process.env.SECRET_KEY || "",
     NODE_ENV: process.env.NODE_ENV || "development",
-    
+    API_BASE_URL: process.env.API_BASE_URL || "http://localhost:8080",
     // Corrección en la capitalización de variables de Cloudinary
     CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || "",

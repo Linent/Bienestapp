@@ -29,6 +29,8 @@ const errorsConstants = {
   userNotEnabled: 'errors.user_not_enabled',
   schedulesEmpty: 'schedules.is_empty',
   schedulesNotFound: 'schedules.not_found',
+  notFound: 'errors.not_found',
+  unauthorized: 'errors.unauthorized',
 };
 
 module.exports = {

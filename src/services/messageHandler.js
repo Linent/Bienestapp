@@ -6,6 +6,9 @@ const careerService = require("./CareerService");
 const openAiService = require("./openAiService");
 const { loadPDFContent } = require("../utils/loadPdfContent");
 const askGemini = require("./geminiService");
+const Topic = require("../services/topicService");
+const config = require("../config/config");
+const BASE_URL = config.API_BASE_URL
 
 class MessageHandler {
   constructor() {
@@ -142,13 +145,13 @@ class MessageHandler {
         this.assistandState[to] = { step: "question" };
         responseMessage =
           `Has seleccionado consultar servicios. Estos son algunos temas sobre los que puedes preguntar:\n\n` +
-          `- Asesoría psicológica y orientación personal\n` +
-          `- Citas médicas y odontológicas\n` +
-          `- Actividades deportivas, culturales y recreativas\n` +
-          `- Programas de apoyo socioeconómico (subsidios o auxilios)\n` +
-          `- Cursos, talleres y formación integral\n` +
-          `- Programa Amigos Académicos\n` +
-          `- Convocatorias y eventos institucionales\n\n` +
+          `1 Servicio Médico\n` +
+          `2 Servicio Odontológico\n` +
+          `3 Servicio Psicológico\n` +
+          `4 Servicio Psicosocial\n` +
+          `5 Asesoría Espiritual\n` +
+          `6 Amigos Académicos\n` +
+          `Bienestar Universitario \n`+
           `¿Sobre qué necesitas saber más?`;
         break;
 
@@ -192,7 +195,7 @@ class MessageHandler {
             advisors
               .map(
                 (a, i) =>
-                  `👤 *${a.name}*\n📧 ${a.email}\n🆔 Código: ${a.codigo}\n`
+                  `👤 *${a.name}*\n🆔 Código: ${a.codigo}\n`
               )
               .join("\n\n") +
             `\n\n✍️ Escribe el código del asesor con el que deseas agendar.`;
@@ -386,39 +389,52 @@ class MessageHandler {
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
     await whatsappService.markAsRead(message.id);
   } */
-  async handleAssistandFlow(to, message) {
-    const state = this.assistandState[to];
-    let responseMessage;
-    const menuMessage = "¿La respuesta fue de tu ayuda?";
-    const buttons = [
-      {
-        type: "reply",
-        reply: { id: "option_4", title: "Sí, gracias" },
-      },
-      {
-        type: "reply",
-        reply: { id: "option_5", title: "Hacer otra pregunta" },
-      },
-    ];
+    async handleAssistandFlow(to, message) {
+  const state = this.assistandState[to];
+  let responseMessage;
+  const menuMessage = "¿La respuesta fue de tu ayuda?";
+  const buttons = [
+    {
+      type: "reply",
+      reply: { id: "option_4", title: "Sí, gracias" },
+    },
+    {
+      type: "reply",
+      reply: { id: "option_5", title: "Hacer otra pregunta" },
+    },
+  ];
 
-    try {
-      if (state.step === "question") {
-        const pdfText = await loadPDFContent(
-          "./src/docs/Información bienestar universitario BienestarBot.pdf"
-        ); // Ajusta si cambia la ruta
+  try {
+    if (state.step === "question") {
+      // 👉 URL base dinámica
+
+      const searchUrl = await Topic.getTopicsByKeyword(message);
+
+      
+      const foundTopic = searchUrl;
+      if (!foundTopic) {
+        responseMessage =
+          "Lo siento, no encontré información relacionada con tu consulta. Intenta reformular la pregunta.";
+      } else {
+        // 👉 Construcción dinámica de URL pública del archivo
+        const pdfUrl = `src/${foundTopic.filePath}`;
+        console.log(pdfUrl);
+        const pdfText = await loadPDFContent(pdfUrl);
+
         responseMessage = await askGemini(message, pdfText);
       }
-
-      await whatsappService.sendMessage(to, responseMessage);
-      await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
-    } catch (error) {
-      console.error("Error en handleAssistandFlow con Gemini:", error);
-      await whatsappService.sendMessage(
-        to,
-        "Lo sentimos, ocurrió un error al procesar tu consulta."
-      );
     }
+
+    await whatsappService.sendMessage(to, responseMessage);
+    await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+  } catch (error) {
+    console.error("Error en handleAssistandFlow:", error);
+    await whatsappService.sendMessage(
+      to,
+      "Lo sentimos, ocurrió un error al procesar tu consulta."
+    );
   }
+}
 }
 
 module.exports = new MessageHandler();
