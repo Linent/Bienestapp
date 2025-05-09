@@ -49,7 +49,7 @@ module.exports = (user) => `
           <p>Nos alegra tenerte como parte de nuestra comunidad. Aquí encontrarás apoyo en salud, actividades culturales, asesorías académicas y más.</p>
           <p>Explora nuestros servicios y aprovecha todo lo que Bienestar Universitario tiene para ofrecerte.</p>
           <p>
-            <a class="claseBoton" href="https://86s54q6q-3000.use2.devtunnels.ms/" style="color: white" target="_blank">Ir a la Plataforma</a>
+            <a class="claseBoton" href="https://bienestapp-frontend.vercel.app/" style="color: white" target="_blank">Ir a la Plataforma</a>
           </p>
           <p style="margin-bottom: 30px;">¡Esperamos verte pronto en nuestras actividades!</p>
           <p><b>Atentamente,</b></p>
