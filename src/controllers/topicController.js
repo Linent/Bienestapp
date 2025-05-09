@@ -1,8 +1,9 @@
 const topicService = require("../services/topicService");
 const { handlerError } = require("../handlers/errors.handlers");
 const { errorsConstants } = require("../constants/errors.constant");
-const UploadFile = require("../helpers/UploadFile");
+const UploadFile = require("../helpers/uploadFile");
 const isAdmin = (role) => role === "admin";
+console.log("UploadFile helper cargado correctamente:", typeof UploadFile);
 
 const createTopic = async (req, res) => {
   if (!isAdmin(req.user.role)) {
