@@ -5,6 +5,10 @@ const { errorsConstants } = require("../constants/errors.constant");
 // 📌 Crear una asesoría (solo admin)
 exports.createAdvisory = async (req, res) => {
   try {
+    const usersValid = ["admin", "academic_friend"];
+    if (!usersValid.includes(req.user.role)) {
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
     if (req.user.role !== "admin") {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }

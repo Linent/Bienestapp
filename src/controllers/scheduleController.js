@@ -6,9 +6,11 @@ exports.createSchedule = async (req, res) => {
   try {
  
     const { studentId, topic, advisoryId } = req.body;
+    console.log(studentId, topic, advisoryId);
     if (!studentId || !topic || !advisoryId) {
       return handlerError(res, 400, errorsConstants.inputRequired);
     }
+    
     const newSchedule = await ScheduleService.createSchedule(
       studentId,
       topic,
@@ -148,6 +150,22 @@ exports.getSchedulesByStudent = async (req, res) => {
   }
 };
 
+exports.submitFeedback = async (req, res) => {
+  try {
+    const { scheduleId } = req.params;
+    const { description, rating } = req.body;
+
+    if (!description || !rating) {
+      return handlerError(res, 400, errorsConstants.inputRequired);
+    }
+
+    const updated = await ScheduleService.updateFeedback(scheduleId, description, rating);
+    res.status(200).send(updated);
+  } catch (error) {
+    console.error("Error al enviar feedback:", error);
+    return handlerError(res, 500, error.message || errorsConstants.serverError);
+  }
+};
 
 
 exports.getStudentsScheduledToday = async (req, res) => {

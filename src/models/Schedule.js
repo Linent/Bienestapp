@@ -20,6 +20,9 @@ const scheludeShema = new mongoose.Schema(
       required: true,
     },
     dateStart: { type: Date, required: true }, // Fecha y hora de inicio de la asesoría
+    observation: { type: String, default: "" }, // Observaciones del asesor
+    feedback: { type: String, default: "" }, // comentario del estudiante
+    rating: { type: Number, min: 1, max: 5 }, // calificación de 1 a 5
   },
   { timestamps: true }
 );

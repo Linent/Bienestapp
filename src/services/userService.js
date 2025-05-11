@@ -1,15 +1,16 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const JwtService = require("./jwt");
-const welcomeTemplate   = require('../emails/welcome_user')
+const welcomeTemplate = require("../emails/welcome_user");
 const EmailService = require("../config/emailConfig");
 const { errorsConstants } = require("../constants/errors.constant");
-const { handlerError } = require("../handlers/errors.handlers");
-
 
 exports.registerUser = async (name, email, password, role, career, codigo) => {
   try {
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      $or: [{ email }, { codigo }],
+    });
+    console.log("existingUser", existingUser);
     if (existingUser) {
       return errorsConstants.userExist;
     }
@@ -23,7 +24,7 @@ exports.registerUser = async (name, email, password, role, career, codigo) => {
       codigo,
     });
     const createUser = await newUser.save();
-     const userId = String(createUser._id);
+    const userId = String(createUser._id);
     await exports.sendWelcomeEmail(userId);
 
     return createUser;
@@ -36,12 +37,12 @@ exports.loginUser = async (email, password) => {
   const user = await User.findOne({ email }, { projection: { password: 0 } });
 
   if (!user || !user.enable) {
-    return 
+    return;
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    return 
+    return;
   }
 
   const jwtService = new JwtService();
@@ -52,21 +53,24 @@ exports.loginUser = async (email, password) => {
 
 exports.getAllUsers = async () => {
   return await User.find({ delete: false })
-  .populate({path: "career", select: "name"})
-  .select("-password");
+    .populate({ path: "career", select: "name" })
+    .select("-password");
 };
 
 exports.getUserById = async (id) => {
-  return await User.findById(id)
-  .populate({path: "career", select: "name"});
+  return await User.findById(id).populate({ path: "career", select: "name" });
 };
 exports.deleteUser = async (id) => {
-  const user = await User.findByIdAndUpdate(id, { delete: true }, { new: true });
+  const user = await User.findByIdAndUpdate(
+    id,
+    { delete: true },
+    { new: true }
+  );
   if (!user) {
     throw new Error(errorsConstants.userNotFound);
   }
   return user;
-}
+};
 
 exports.updateUser = async (id, data) => {
   // Si viene la contraseña, la codificamos
@@ -74,47 +78,52 @@ exports.updateUser = async (id, data) => {
     const hashedPassword = await bcrypt.hash(data.password, 10);
     data.password = hashedPassword;
   }
-  return await User.findByIdAndUpdate(id, data, { new: true }).select("-password");
+  return await User.findByIdAndUpdate(id, data, { new: true }).select(
+    "-password"
+  );
 };
 
 exports.disableUser = async (id, enable) => {
   return await User.findByIdAndUpdate(id, { enable }, { new: true });
-}; 
-
-
+};
 
 exports.sendWelcomeEmail = async (userId) => {
-try{
-    if(!userId){
+  try {
+    if (!userId) {
       throw new Error(errorsConstants.inputIdRequired);
     }
     const user = await User.findById(userId);
-  if (!user) {
+    if (!user) {
       throw new Error("Usuario no encontrado");
+    }
+
+    const subject = "Bienvenido a la Plataforma de Asesorías";
+    const text = `Hola ${user.name}, bienvenido a nuestra plataforma.`;
+    const html = welcomeTemplate(user);
+
+    const Succesmail = await EmailService.sendEmail(
+      user.email,
+      subject,
+      text,
+      html
+    );
+    return { message: "Correo enviado" };
+  } catch (error) {
+    return { message: "error: " + error };
   }
-  
-  const subject = "Bienvenido a la Plataforma de Asesorías";
-  const text = `Hola ${user.name}, bienvenido a nuestra plataforma.`;
-  const html = welcomeTemplate(user)
- 
-  const Succesmail = await EmailService.sendEmail(user.email, subject, text, html);
-  return { message: "Correo enviado" };
-}catch(error){
-  return { message: 'error: '+error };
-}
 };
 
 exports.forgotPassword = async (email) => {
   try {
-      const user = await User.findOne({ email: email.toLowerCase().trim() });
-      if (!user) return { success: false, message: "Usuario no encontrado" };
-      const jwtService = new JwtService();
-      const hash = jwtService.generateToken({ id: user._id, role: user.role }); // Genera un token de recuperación
-      await EmailService.forgotPassword(user, hash); // Envía el email
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) return { success: false, message: "Usuario no encontrado" };
+    const jwtService = new JwtService();
+    const hash = jwtService.generateToken({ id: user._id, role: user.role }); // Genera un token de recuperación
+    await EmailService.forgotPassword(user, hash); // Envía el email
 
-      return { success: true, message: "Correo de recuperación enviado" };
+    return { success: true, message: "Correo de recuperación enviado" };
   } catch (error) {
-      return { success: false, message: "Error al procesar la solicitud", error };
+    return { success: false, message: "Error al procesar la solicitud", error };
   }
 };
 
@@ -147,11 +156,11 @@ exports.getSchedulesByStudent = async (studentId) => {
     .populate("studentId", "name email") // Info del estudiante
     .sort({ createdAt: -1 }); // Ordena por fecha de creación (más recientes primero)
 };
-exports.findByEmail = (email) =>{
+exports.findByEmail = (email) => {
   return User.findOne({ email }).select("-password"); // Excluye la contraseña
-}
-exports.findByAdvisorCode= async(advisorCode) => {
+};
+exports.findByAdvisorCode = async (advisorCode) => {
   const advisor = await User.findById(advisorCode);
 
   return advisor;
-}
+};

@@ -481,7 +481,7 @@ paths:
           schema:
             type: string
           description: ID del asesor académico (amigo académico)
-          example: "67ec7245138ae227d86ecb59"
+          example: "67f4a65ee2320613ef0a79f1"
         - name: day
           in: query
           required: true
@@ -496,7 +496,7 @@ paths:
             type: string
             format: date-time
           description: hora de la asesoría
-          example: "13:00"
+          example: "2025-05-05T15:00:00.000+00:00"
       responses:
         "200":
           description: Lista de estudiantes agendados en esa asesoría
@@ -563,10 +563,6 @@ paths:
                   type: string
                   descriptión: 
                   example: 67d8d485dc4bf243ae06a1fc
-                "status": 
-                  type: string
-                  descriptión: 
-                  example: pending
       responses:
         '201':
           description: Registro de asistencia agendada creado exitosamente
@@ -1046,7 +1042,7 @@ paths:
         "200":
           description: Tema actualizado
 
-    post:
+    delete:
       summary: Eliminar tema (marcado lógico)
       tags:
         - Topics

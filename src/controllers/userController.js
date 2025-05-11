@@ -16,6 +16,10 @@ const register = async (req, res) => {
       name, email, password, role, career, codigo
     );
 
+    if (!userCreated || typeof userCreated === "string") {
+      return handlerError(res, 400, userCreated || errorsConstants.userNotCreate);
+    }
+
     return res.status(201).send(userCreated);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);

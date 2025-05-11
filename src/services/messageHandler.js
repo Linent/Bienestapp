@@ -8,6 +8,7 @@ const { loadPDFContent } = require("../utils/loadPdfContent");
 const askGemini = require("./geminiService");
 const Topic = require("../services/topicService");
 const config = require("../config/config");
+const path = require("path");
 const BASE_URL = config.API_BASE_URL
 
 class MessageHandler {
@@ -140,7 +141,7 @@ class MessageHandler {
           "Perfecto. Vamos a agendar tu asesoría. 📚 Buscando asesores disponibles...";
         await this.handleAppointmentFlow(to, null);
         return;
-
+        
       case "consultar servicios":
         this.assistandState[to] = { step: "question" };
         responseMessage =
@@ -409,18 +410,15 @@ class MessageHandler {
       // 👉 URL base dinámica
 
       const searchUrl = await Topic.getTopicsByKeyword(message);
-
+      console.log(searchUrl.filePath);
       
       const foundTopic = searchUrl;
       if (!foundTopic) {
         responseMessage =
           "Lo siento, no encontré información relacionada con tu consulta. Intenta reformular la pregunta.";
       } else {
-        // 👉 Construcción dinámica de URL pública del archivo
-        const pdfUrl = `src/${foundTopic.filePath}`;
-        console.log(pdfUrl);
-        const pdfText = await loadPDFContent(pdfUrl);
-
+        const pdfUrl = "./src/"+foundTopic.filePath;
+        const pdfText = await loadPDFContent(pdfUrl); // Ajusta si cambia la ruta
         responseMessage = await askGemini(message, pdfText);
       }
     }

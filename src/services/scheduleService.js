@@ -3,36 +3,64 @@ const Advisory = require("../models/Advisory");
 const { getNextMatchingDate } = require("../helpers/dateHelper");
 const { DateTime } = require("luxon");
 
+
+
 exports.createSchedule = async (studentId, topic, advisoryId) => {
   try {
     const advisory = await Advisory.findById(advisoryId);
-    if (!advisory) {
-      throw new Error("No se encontró la asesoría.");
-    }
+    if (!advisory) throw new Error("No se encontró la asesoría.");
 
-    // Extrae el día y la hora usando zona horaria de Bogotá
     const advisoryDay = advisory.day;
     const advisoryHour = DateTime.fromJSDate(advisory.dateStart)
       .setZone("America/Bogota")
       .toFormat("HH:mm");
 
-    // Calcula la próxima fecha válida
-    const nextDate = getNextMatchingDate(advisoryDay, advisoryHour);
-    console.log("➡ Próxima fecha sugerida:", nextDate.toISO()); // para verificar
+    const baseDate = getNextMatchingDate(advisoryDay, advisoryHour);
+
+    const schedules = await Schedule.find({
+      AdvisoryId: advisoryId,
+      dateStart: {
+        $gte: baseDate.startOf("day").toJSDate(),
+        $lte: baseDate.endOf("day").toJSDate(),
+      }
+    }).sort("dateStart");
+
+    if (schedules.length >= 4) throw new Error("No hay cupos disponibles para esta asesoría.");
+
+    const occupiedSlots = schedules.map(s => DateTime.fromJSDate(s.dateStart).toISO());
+
+    let slot = baseDate;
+    const end = slot.plus({ hours: 2 });
+    let selectedSlot = null;
+
+    while (slot < end) {
+      if (!occupiedSlots.includes(slot.toISO()) && slot > DateTime.now()) {
+        selectedSlot = slot;
+        break;
+      }
+      slot = slot.plus({ minutes: 30 });
+    }
+
+    if (!selectedSlot) throw new Error("No hay horarios disponibles.");
 
     const newSchedule = new Schedule({
       studentId,
       topic,
       AdvisoryId: advisoryId,
-      dateStart: nextDate.toJSDate(), // guarda bien como UTC
+      dateStart: selectedSlot.toJSDate(),
     });
 
     await newSchedule.save();
+    return newSchedule;
   } catch (error) {
     throw new Error("Error al agendar: " + error.message);
   }
 };
-//{ path:'AdvisoryId', select: 'advisorId ' }
+
+// Ayuda: función para obtener la próxima fecha con ese día de la semana
+
+
+
 exports.getSchedules = async () => {
   try {
     const schedules = await Schedule.find()
@@ -53,7 +81,7 @@ exports.getSchedules = async () => {
 
 exports.getStudentsByAdvisorAndDate = async (advisoryId, day, dateStart) => {
   const advisorySchedules = await Schedule.find({ AdvisoryId: advisoryId })
-    .populate({ path: "AdvisoryId", select: "dateStart day" })
+    .populate({ path: "AdvisoryId", select: "dateStart advisorId day", populate: {path:"advisorId", select:"name email"} })
     .populate({
       path: "studentId",
       select: "name codigo email career",
@@ -61,22 +89,21 @@ exports.getStudentsByAdvisorAndDate = async (advisoryId, day, dateStart) => {
     });
 
   const filteredSchedules = advisorySchedules.filter((schedule) => {
-    const advisory = schedule.AdvisoryId;
-    if (!advisory || !schedule.dateStart) return false;
+  const advisory = schedule.AdvisoryId;
+  if (!advisory || !schedule.dateStart) return false;
 
-    const advisoryDay = advisory.day.toLowerCase();
+  const advisoryDay = advisory.day.toLowerCase();
 
-    const scheduleMillis = DateTime.fromJSDate(schedule.dateStart)
-      .toUTC()
-      .startOf("minute")
-      .toMillis();
-    const queryMillis = DateTime.fromISO(dateStart)
-      .toUTC()
-      .startOf("minute")
-      .toMillis();
+  const scheduleTime = DateTime.fromJSDate(schedule.dateStart).toUTC().startOf("minute");
+  const queryStartTime = DateTime.fromISO(dateStart).toUTC().startOf("minute");
+  const queryEndTime = queryStartTime.plus({ hours: 2 });
 
-    return advisoryDay === day.toLowerCase() && scheduleMillis === queryMillis;
-  });
+  return (
+    advisoryDay === day.toLowerCase() &&
+    scheduleTime >= queryStartTime &&
+    scheduleTime < queryEndTime
+  );
+});
 
   return filteredSchedules;
 };
@@ -122,6 +149,21 @@ exports.updateAttendance = async (scheduleId, attendanceStatus) => {
   if (!schedule) throw new Error("No se encontró el schedule");
 
   return schedule;
+};
+
+exports.updateFeedback = async (scheduleId, description, rating) => {
+  const schedule = await Schedule.findById(scheduleId);
+  if (!schedule) {
+    throw new Error("Asesoría no encontrada.");
+  }
+
+  if (schedule.status !== "completed") {
+    throw new Error("Solo puedes calificar asesorías completadas.");
+  }
+
+  schedule.description = description;
+  schedule.rating = rating;
+  return await schedule.save();
 };
 
 exports.getSchedulesByStudent = async (studentId) => {
