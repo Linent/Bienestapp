@@ -9,17 +9,14 @@ exports.createAdvisory = async (req, res) => {
     if (!usersValid.includes(req.user.role)) {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
-    if (req.user.role !== "admin") {
-      return handlerError(res, 403, errorsConstants.unauthorized);
-    }
 
-    const { advisorId, careerId, dateStart, day } = req.body;
+    const { advisorId, careerId, dateStart, day, status } = req.body;
     
     if (!advisorId || !careerId || !dateStart || !day  ) {
       return handlerError(res, 400, errorsConstants.inputRequired);
     }
 
-    const advisory = await advisoryService.createAdvisory(advisorId, careerId, dateStart, day );
+    const advisory = await advisoryService.createAdvisory(advisorId, careerId, dateStart, day, status );
     return res.status(201).send(advisory);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
@@ -74,7 +71,8 @@ exports.getAdvisoryById = async (req, res) => {
 // 📌 Actualizar asesoría (solo admin)
 exports.updateAdvisory = async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
+    const usersValid = ["admin", "academic_friend"];
+    if (!usersValid.includes(req.user.role)) {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
     const { advisoryId } = req.params;

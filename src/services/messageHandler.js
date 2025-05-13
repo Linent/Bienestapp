@@ -9,7 +9,9 @@ const askGemini = require("./geminiService");
 const Topic = require("../services/topicService");
 const config = require("../config/config");
 const path = require("path");
-const BASE_URL = config.API_BASE_URL
+const { mapNumberToKeyword } = require("../utils/mapNumberToKeyWord");
+
+const BASE_URL = config.API_BASE_URL;
 
 class MessageHandler {
   constructor() {
@@ -58,13 +60,42 @@ class MessageHandler {
 
   // ✅ Saludo simple
   isGreeting(message) {
-    return [
+    const normalized = message
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    const greetings = [
       "hola",
-      "buenos días",
+      "holaa",
+      "holi",
+      "holis",
+      "ola",
+      "ola k ase",
+      "hello",
+      "hey",
+      "buenos dias",
       "buenas tardes",
       "buenas noches",
+      "buen dia",
+      "buenas",
+      "saludos",
+      "que tal",
+      "que mas",
+      "necesito ayuda",
+      "tengo una duda",
       "quiero saber algo",
-    ].includes(message);
+      "quiero preguntar algo",
+      "ayuda",
+      "informacion",
+      "una pregunta",
+      "👋",
+      "🙋",
+      "🙋‍♂️",
+      "🙋‍♀️",
+    ];
+
+    return greetings.some((greet) => normalized.includes(greet));
   }
 
   getSenderName(senderInfo) {
@@ -141,7 +172,7 @@ class MessageHandler {
           "Perfecto. Vamos a agendar tu asesoría. 📚 Buscando asesores disponibles...";
         await this.handleAppointmentFlow(to, null);
         return;
-        
+
       case "consultar servicios":
         this.assistandState[to] = { step: "question" };
         responseMessage =
@@ -152,7 +183,7 @@ class MessageHandler {
           `4 Servicio Psicosocial\n` +
           `5 Asesoría Espiritual\n` +
           `6 Amigos Académicos\n` +
-          `Bienestar Universitario \n`+
+          `Bienestar Universitario \n` +
           `¿Sobre qué necesitas saber más?`;
         break;
 
@@ -194,10 +225,7 @@ class MessageHandler {
           responseMessage =
             "📚 *Asesores disponibles:*\n\n" +
             advisors
-              .map(
-                (a, i) =>
-                  `👤 *${a.name}*\n🆔 Código: ${a.codigo}\n`
-              )
+              .map((a, i) => `👤 *${a.name}*\n🆔 Código: ${a.codigo}\n`)
               .join("\n\n") +
             `\n\n✍️ Escribe el código del asesor con el que deseas agendar.`;
           break;
@@ -390,49 +418,62 @@ class MessageHandler {
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
     await whatsappService.markAsRead(message.id);
   } */
-    async handleAssistandFlow(to, message) {
-  const state = this.assistandState[to];
-  let responseMessage;
-  const menuMessage = "¿La respuesta fue de tu ayuda?";
-  const buttons = [
-    {
-      type: "reply",
-      reply: { id: "option_4", title: "Sí, gracias" },
-    },
-    {
-      type: "reply",
-      reply: { id: "option_5", title: "Hacer otra pregunta" },
-    },
-  ];
+  async handleAssistandFlow(to, message) {
+    const state = this.assistandState[to];
+    const menuMessage = "¿La respuesta fue de tu ayuda?";
+    const buttons = [
+      {
+        type: "reply",
+        reply: { id: "option_4", title: "Sí, gracias" },
+      },
+      {
+        type: "reply",
+        reply: { id: "option_5", title: "Hacer otra pregunta" },
+      },
+    ];
 
-  try {
-    if (state.step === "question") {
-      // 👉 URL base dinámica
+    let responseMessage = "";
 
-      const searchUrl = await Topic.getTopicsByKeyword(message);
-      console.log(searchUrl.filePath);
-      
-      const foundTopic = searchUrl;
-      if (!foundTopic) {
-        responseMessage =
-          "Lo siento, no encontré información relacionada con tu consulta. Intenta reformular la pregunta.";
+    try {
+      if (state.step === "question") {
+        // Buscar el tema relacionado con la palabra clave
+        let keyword = mapNumberToKeyword(message) || message;
+        const topic = await Topic.getTopicsByKeyword(keyword);
+
+        if (!topic) {
+          responseMessage =
+            "Lo siento, no encontré información relacionada con tu consulta. Intenta reformular la pregunta.";
+        } else {
+          const pdfText = await loadPDFContent(topic.filePath);
+
+          try {
+            responseMessage = await askGemini(message, pdfText);
+          } catch (geminiError) {
+            console.error("Error con Gemini:", geminiError);
+            if (geminiError.status === 429) {
+              responseMessage =
+                "⚠️ Has alcanzado el límite de consultas gratuitas. Intenta más tarde o contacta al área de Bienestar.";
+            } else {
+              responseMessage =
+                "⚠️ Lo siento, ocurrió un error al generar la respuesta. Por favor intenta de nuevo.";
+            }
+          }
+        }
       } else {
-        const pdfUrl = "./src/"+foundTopic.filePath;
-        const pdfText = await loadPDFContent(pdfUrl); // Ajusta si cambia la ruta
-        responseMessage = await askGemini(message, pdfText);
+        responseMessage =
+          "¿En qué puedo ayudarte con los servicios de Bienestar Universitario?";
       }
-    }
 
-    await whatsappService.sendMessage(to, responseMessage);
-    await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
-  } catch (error) {
-    console.error("Error en handleAssistandFlow:", error);
-    await whatsappService.sendMessage(
-      to,
-      "Lo sentimos, ocurrió un error al procesar tu consulta."
-    );
+      await whatsappService.sendMessage(to, responseMessage);
+      await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+    } catch (error) {
+      console.error("Error general en handleAssistandFlow:", error);
+      await whatsappService.sendMessage(
+        to,
+        "Lo sentimos, ocurrió un error inesperado al procesar tu consulta."
+      );
+    }
   }
-}
 }
 
 module.exports = new MessageHandler();

@@ -13,5 +13,6 @@ router.get("/:userId", Auth,userController.getUserById);
 router.post("/:userId", Auth, userController.updateUser);
 router.post("/enable/:userId", Auth, userController.disableUser);
 router.post("/send-email", Auth,userController.sendWelcomeEmail);
+router.put("/:userId/files", Auth, userController.updateUserFiles);
 
 module.exports = router;

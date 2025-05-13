@@ -31,6 +31,8 @@ const errorsConstants = {
   schedulesNotFound: 'schedules.not_found',
   notFound: 'errors.not_found',
   unauthorized: 'errors.unauthorized',
+  fileRequired: 'errors.file_required',
+  fileNotFound: 'errors.file_not_found',
 };
 
 module.exports = {

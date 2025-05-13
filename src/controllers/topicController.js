@@ -3,7 +3,9 @@ const { handlerError } = require("../handlers/errors.handlers");
 const { errorsConstants } = require("../constants/errors.constant");
 const UploadFile = require("../helpers/uploadFile");
 const isAdmin = (role) => role === "admin";
-
+const cloudinary = require("../config/cloudinary"); // ajusta el path
+const streamifier = require("streamifier");
+const { uploader } = require("cloudinary").v2;
 const createTopic = async (req, res) => {
   if (!isAdmin(req.user.role)) {
     return handlerError(res, 403, errorsConstants.unauthorized);
@@ -13,17 +15,21 @@ const createTopic = async (req, res) => {
     const { name, description } = req.body;
     let { keywords } = req.body;
 
-    // Parsear keywords si viene como string
+    // Parsear keywords si vienen como string
     if (typeof keywords === "string") {
       try {
-        keywords = JSON.parse(keywords); // Si viene como JSON string
+        keywords = JSON.parse(keywords);
       } catch {
         keywords = keywords.split(",").map((k) => k.trim());
       }
     }
 
     if (!Array.isArray(keywords) || keywords.length === 0) {
-      return handlerError(res, 400, "Las palabras clave deben ser un arreglo no vacío.");
+      return handlerError(
+        res,
+        400,
+        "Las palabras clave deben ser un arreglo no vacío."
+      );
     }
 
     const file = req.files?.file;
@@ -31,29 +37,41 @@ const createTopic = async (req, res) => {
       return handlerError(res, 400, "No se ha proporcionado un archivo.");
     }
 
-    const upload = new UploadFile(file, "topics", ["pdf"], req.user.id);
+    const allowedExts = ["pdf", "jpg", "jpeg", "png"];
+    const fileExt = file.name.split(".").pop().toLowerCase();
 
-    if (!upload.validExt()) {
+    if (!allowedExts.includes(fileExt)) {
       return handlerError(res, 400, "Extensión de archivo no permitida.");
     }
 
-    upload.saveFile(async (err) => {
-      if (err) {
-        console.error("Error al guardar archivo:", err);
-        return handlerError(res, 500, errorsConstants.serverError);
-      }
-
-      const filePath = `uploads/topics/${upload.getName()}`;
-
-      const topic = await topicService.createTopic({
-        name,
-        description,
-        filePath,
-        keywords,
+    // Subida a Cloudinary
+    const streamUpload = () =>
+      new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "topics",
+            resource_type: "auto", // permite imágenes y PDFs
+            access_mode: "public", // 👈 asegúrate de esto (opcional si el default es "public")
+          },
+          (error, result) => {
+            if (result) resolve(result);
+            else reject(error);
+          }
+        );
+        streamifier.createReadStream(file.data).pipe(stream);
       });
 
-      return res.status(201).send(topic);
+    const result = await streamUpload();
+
+    const topic = await topicService.createTopic({
+      name,
+      description,
+      filePath: result.secure_url,
+      keywords,
+      publicId: result.public_id,
     });
+
+    return res.status(201).send(topic);
   } catch (error) {
     console.error("Error en createTopic:", error);
     return handlerError(res, 500, errorsConstants.serverError);
@@ -114,9 +132,17 @@ const updateTopic = async (req, res) => {
     let { keywords } = req.body;
     const updateData = {};
 
+    // Buscar el topic existente
+    const topic = await topicService.getTopicById(topicId);
+    if (!topic || topic.delete) {
+      return handlerError(res, 404, errorsConstants.notFound);
+    }
+
+    // Actualizar campos básicos
     if (name) updateData.name = name;
     if (description) updateData.description = description;
 
+    // Parseo de palabras clave
     if (keywords) {
       if (typeof keywords === "string") {
         try {
@@ -129,42 +155,56 @@ const updateTopic = async (req, res) => {
       if (!Array.isArray(keywords)) {
         return handlerError(res, 400, "Las palabras clave deben ser un arreglo.");
       }
+
       updateData.keywords = keywords;
     }
 
+    // Manejo de archivo
     const file = req.files?.file;
     if (file) {
-      const upload = new UploadFile(file, "topics", ["pdf"], req.user.id);
-      if (!upload.validExt()) {
+      const allowedExts = ["pdf", "jpg", "jpeg", "png"];
+      const fileExt = file.name.split(".").pop().toLowerCase();
+
+      if (!allowedExts.includes(fileExt)) {
         return handlerError(res, 400, "Extensión de archivo no permitida.");
       }
 
-      upload.saveFile(async (err) => {
-        if (err) {
-          return handlerError(res, 500, "Error al guardar el archivo.");
+      // Eliminar archivo anterior en Cloudinary si existe
+      if (topic.publicId) {
+        try {
+          await cloudinary.uploader.destroy(topic.publicId, {
+        resource_type: "auto", // Permite eliminar tanto imágenes como PDFs
+          });
+        } catch (err) {
+          console.warn("No se pudo eliminar el archivo anterior de Cloudinary:", err);
         }
-
-        updateData.filePath = `uploads/topics/${upload.getName()}`;
-        const updated = await topicService.updateTopic(topicId, updateData);
-        if (!updated) {
-          return handlerError(res, 404, errorsConstants.notFound);
-        }
-
-        res.status(200).send(updated);
-      });
-    } else {
-      const updated = await topicService.updateTopic(topicId, updateData);
-      if (!updated) {
-        return handlerError(res, 404, errorsConstants.notFound);
       }
+      // Subir nuevo archivo
+      const streamUpload = () =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+        { folder: "topics", resource_type: "auto" }, // Permite subir imágenes y PDFs
+        (error, result) => {
+          if (result) resolve(result);
+          else reject(error);
+        }
+          );
+          streamifier.createReadStream(file.data).pipe(stream);
+        });
 
-      res.status(200).send(updated);
-    }
-  } catch (error) {
-    console.error("Error en updateTopic:", error);
-    return handlerError(res, 500, errorsConstants.serverError);
-  }
-};
+      const result = await streamUpload();
+      updateData.filePath = result.secure_url;
+      updateData.publicId = result.public_id;
+        }
+
+        const updatedTopic = await topicService.updateTopic(topicId, updateData);
+
+        return res.status(200).send(updatedTopic);
+      } catch (error) {
+        console.error("Error en updateTopic:", error);
+        return handlerError(res, 500, errorsConstants.serverError);
+      }
+    };
 
 const deleteTopic = async (req, res) => {
   if (!isAdmin(req.user.role)) {
@@ -173,18 +213,32 @@ const deleteTopic = async (req, res) => {
 
   try {
     const { topicId } = req.params;
-    const topic = await topicService.deleteTopic(topicId);
-    if (!topic) {
+
+    // 1. Obtener el tópico antes de borrarlo
+    const topic = await topicService.getTopicById(topicId);
+    if (!topic || topic.delete) {
       return handlerError(res, 404, errorsConstants.notFound);
     }
 
-    res.status(200).send({ message: "Tema eliminado correctamente." });
+    // 2. Eliminar el archivo en Cloudinary si tiene publicId
+    if (topic.publicId) {
+      await uploader.destroy(topic.publicId);
+    }
+
+    // 3. Marcar como eliminado o eliminar el documento
+    const deletedTopic = await topicService.deleteTopic(topicId);
+    if (!deletedTopic) {
+      return handlerError(res, 404, errorsConstants.notFound);
+    }
+
+    return res
+      .status(200)
+      .send({ message: "Tema y archivo eliminados correctamente." });
   } catch (error) {
     console.error("Error en deleteTopic:", error);
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
-
 
 module.exports = {
   createTopic,
@@ -192,5 +246,5 @@ module.exports = {
   getTopicById,
   updateTopic,
   deleteTopic,
-  getTopicsByKeyword
+  getTopicsByKeyword,
 };

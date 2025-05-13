@@ -11,7 +11,7 @@ module.exports = {
     // Corrección en la capitalización de variables de Cloudinary
     CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || "",
-
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
     // Variables para WhatsApp API
     WEBHOOK_VERIFY_TOKEN: process.env.WEBHOOK_VERIFY_TOKEN || "",
     API_TOKEN: process.env.API_TOKEN || "",
@@ -26,5 +26,6 @@ module.exports = {
 
     CHATGPT_API_KEY: process.env.CHATGPT_API_KEY || "",
     GEMINI_API_KEY:process.env.GEMINI_API_KEY,
+
 };
 

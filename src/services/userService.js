@@ -71,7 +71,9 @@ exports.deleteUser = async (id) => {
   }
   return user;
 };
-
+exports.updateUserFile = async (userId, updateData) => {
+  return await User.findByIdAndUpdate(userId, updateData, { new: true });
+};
 exports.updateUser = async (id, data) => {
   // Si viene la contraseña, la codificamos
   if (data.password) {

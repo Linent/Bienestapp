@@ -5,68 +5,78 @@ const moment = require("moment");
 const userService = require("./userService");
 
 class AdvisoryService {
-  async createAdvisory(
-    advisorId,
-    careerId,
-    dateStart,
-    day
-  ) {
-    try{const advisor = await userService.getUserById(advisorId);
-    if (!advisor || advisor.role !== "academic_friend") {
-      throw new Error(errorsConstants.unauthorized);
-    }
-  
-    const days = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-    if (!days.includes(day.toLowerCase())) {
-      throw new Error("El día de la semana no es válido.");
-    }
-    
-    // Calcular fecha de finalización (2 horas después del inicio)
-    const start = new Date(dateStart);
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2 horas en milisegundos
-  
-    const durationHours = (end - start) / (1000 * 60 * 60); // Esto ahora será siempre 2 horas
-    
-    // Validar que el asesor no exceda las 20 horas disponibles
-    
-    if (advisor.availableHours + durationHours > 20) {
-      throw new Error("El asesor no puede exceder las 20 horas disponibles.");
-    }
-    
-    // Crear la asesoría con la fecha de finalización calculada
+  async createAdvisory(advisorId, careerId, dateStart, day, status="pending") {
+    try {
+      const advisor = await userService.getUserById(advisorId);
+      if (!advisor || advisor.role !== "academic_friend") {
+        throw new Error(errorsConstants.unauthorized);
+      }
+      const existing = await Advisory.find({ advisorId });
+      if (existing.length >= 10) {
+        throw new Error("Solo puedes registrar hasta 10 asesorías.");
+      }
 
-    const newAdvisory = new Advisory({
-      advisorId,
-      careerId,
-      dateStart: start,
-      dateEnd: end,
-      day: day.toLowerCase(),
-    });
-    
-    // Sumar las horas de la asesoría a las horas disponibles del asesor
-    const horasAcumuladas = advisor.availableHours + durationHours;
-    await userService.updateUser(advisorId, { availableHours: horasAcumuladas });
-    const advisoryCreate = await newAdvisory.save();
-    
-    return advisoryCreate;}
-    catch (error) {
+      const days = [
+        "domingo",
+        "lunes",
+        "martes",
+        "miércoles",
+        "jueves",
+        "viernes",
+        "sábado",
+      ];
+      if (!days.includes(day.toLowerCase())) {
+        throw new Error("El día de la semana no es válido.");
+      }
+
+      // Calcular fecha de finalización (2 horas después del inicio)
+      const start = new Date(dateStart);
+      const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2 horas en milisegundos
+
+      const durationHours = (end - start) / (1000 * 60 * 60); // Esto ahora será siempre 2 horas
+
+      // Validar que el asesor no exceda las 20 horas disponibles
+
+      if (advisor.availableHours + durationHours > 20) {
+        throw new Error("El asesor no puede exceder las 20 horas disponibles.");
+      }
+
+      // Crear la asesoría con la fecha de finalización calculada
+
+      const newAdvisory = new Advisory({
+        advisorId,
+        careerId,
+        dateStart: start,
+        dateEnd: end,
+        day: day.toLowerCase(),
+        status
+      });
+
+      // Sumar las horas de la asesoría a las horas disponibles del asesor
+      const horasAcumuladas = advisor.availableHours + durationHours;
+      await userService.updateUser(advisorId, {
+        availableHours: horasAcumuladas,
+      });
+      const advisoryCreate = await newAdvisory.save();
+
+      return advisoryCreate;
+    } catch (error) {
       throw handlerError("Error al crear la asesoría: " + error.message);
     }
   }
   async getAllAdvisory() {
     try {
-      const advisories = await Advisory.find()
+      const advisories = await Advisory.find({status: "approved"})
         .populate({ path: "advisorId", select: "name role" })
         .populate({ path: "careerId", select: "name" });
 
       return advisories;
     } catch (error) {
       throw handlerError("Error in get all advisory: " + error.message);
-    } 
+    }
   }
   async getAdvisoryById(advisoryId) {
     try {
-
       const advisory = await Advisory.findById(advisoryId).populate(
         "advisorId careerId"
       );
@@ -92,7 +102,8 @@ class AdvisoryService {
   async updateAdvisoryStatus(advisoryId, status) {
     try {
       const advisoryUpdate = await Advisory.findByIdAndUpdate(
-        advisoryId,{ $set: { status } },
+        advisoryId,
+        { $set: { status } },
         {
           new: true,
         }
@@ -333,37 +344,55 @@ class AdvisoryService {
       })
       .sort({ dateStart: -1 }); // Ordena por fecha descendente
   }
-   getDayOfWeekNumber  (dayName)  {
-    const days = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  getDayOfWeekNumber(dayName) {
+    const days = [
+      "domingo",
+      "lunes",
+      "martes",
+      "miércoles",
+      "jueves",
+      "viernes",
+      "sábado",
+    ];
     return days.indexOf(dayName);
-  };
+  }
   // service/advisoryService.js
   async getAdvisoriesThisWeek() {
     try {
       const now = new Date();
       const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDay() === 0 ? now.getDate() - 6 : now.getDate() - now.getDay() + 1); // lunes
+      startOfWeek.setDate(
+        now.getDay() === 0
+          ? now.getDate() - 6
+          : now.getDate() - now.getDay() + 1
+      ); // lunes
       startOfWeek.setHours(0, 0, 0, 0);
-  
+
       const advisories = await Advisory.find({
         status: "approved",
         recurring: true,
       }).populate({ path: "advisorId", select: "name email codigo" });
-  
+
       const resultMap = new Map();
-  
+
       advisories.forEach((advisory) => {
         const dayNumber = this.getDayOfWeekNumber(advisory.day);
-  
+
         const advisoryDate = new Date(startOfWeek);
         advisoryDate.setDate(startOfWeek.getDate() + (dayNumber - 1));
-  
+
         const startUTC = new Date(advisoryDate);
-        startUTC.setUTCHours(advisory.dateStart.getUTCHours(), advisory.dateStart.getUTCMinutes());
-  
+        startUTC.setUTCHours(
+          advisory.dateStart.getUTCHours(),
+          advisory.dateStart.getUTCMinutes()
+        );
+
         const endUTC = new Date(advisoryDate);
-        endUTC.setUTCHours(advisory.dateEnd.getUTCHours(), advisory.dateEnd.getUTCMinutes());
-  
+        endUTC.setUTCHours(
+          advisory.dateEnd.getUTCHours(),
+          advisory.dateEnd.getUTCMinutes()
+        );
+
         // Formato HH:mm (24 horas) en zona horaria Colombia
         const startCol = new Intl.DateTimeFormat("es-CO", {
           timeZone: "America/Bogota",
@@ -371,16 +400,16 @@ class AdvisoryService {
           minute: "2-digit",
           hour12: false,
         }).format(startUTC);
-  
+
         const endCol = new Intl.DateTimeFormat("es-CO", {
           timeZone: "America/Bogota",
           hour: "2-digit",
           minute: "2-digit",
           hour12: false,
         }).format(endUTC);
-  
+
         const advisorId = advisory.advisorId._id.toString();
-  
+
         if (!resultMap.has(advisorId)) {
           resultMap.set(advisorId, {
             advisorCode: advisorId,
@@ -390,41 +419,36 @@ class AdvisoryService {
             horarios: [],
           });
         }
-  
+
         const horarioTexto = `${advisory.day} de ${startCol} a ${endCol}`;
         resultMap.get(advisorId).horarios.push(horarioTexto);
       });
-  
+
       return Array.from(resultMap.values());
     } catch (error) {
       console.error(error);
       throw new Error("Error al agrupar asesorías semanales: " + error.message);
     }
   }
-  
-  
 
-async  findOneByAdvisorAndDay(advisorCode, selectedDay, selectedHour) {
-  // Buscar al asesor por su código
-  const advisor = await userService.findByAdvisorCode(advisorCode);
-  if (!advisor) return null;
-  // Buscar asesorías del asesor ese día
-  const advisories = await Advisory.find({
-    advisorId: advisor._id,
-    day: selectedDay.toLowerCase(), // en minúsculas para coincidir con 'miércoles', etc.
-  });
+  async findOneByAdvisorAndDay(advisorCode, selectedDay, selectedHour) {
+    // Buscar al asesor por su código
+    const advisor = await userService.findByAdvisorCode(advisorCode);
+    if (!advisor) return null;
+    // Buscar asesorías del asesor ese día
+    const advisories = await Advisory.find({
+      advisorId: advisor._id,
+      day: selectedDay.toLowerCase(), // en minúsculas para coincidir con 'miércoles', etc.
+    });
 
-  // Filtrar por hora exacta
-  const advisory = advisories.find((a) => {
-    
-    const hora = moment(a.dateStart).format("HH:mm");
-    return hora === selectedHour;
-  });
+    // Filtrar por hora exacta
+    const advisory = advisories.find((a) => {
+      const hora = moment(a.dateStart).format("HH:mm");
+      return hora === selectedHour;
+    });
 
-  return advisory || null;
-}
-
-
+    return advisory || null;
+  }
 }
 
 module.exports = new AdvisoryService();

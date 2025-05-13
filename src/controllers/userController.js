@@ -2,8 +2,9 @@ const userService = require("../services/userService");
 const { handlerError } = require("../handlers/errors.handlers");
 const { errorsConstants } = require("../constants/errors.constant");
 const JwtService = require("../services/jwt");
-
-
+const streamifier = require("streamifier");
+const { uploader } = require("cloudinary").v2;
+const cloudinary = require("../config/cloudinary");
 // Registro de usuario
 const register = async (req, res) => {
   try {
@@ -13,11 +14,20 @@ const register = async (req, res) => {
     }
 
     const userCreated = await userService.registerUser(
-      name, email, password, role, career, codigo
+      name,
+      email,
+      password,
+      role,
+      career,
+      codigo
     );
 
     if (!userCreated || typeof userCreated === "string") {
-      return handlerError(res, 400, userCreated || errorsConstants.userNotCreate);
+      return handlerError(
+        res,
+        400,
+        userCreated || errorsConstants.userNotCreate
+      );
     }
 
     return res.status(201).send(userCreated);
@@ -30,13 +40,14 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    (email, password);
-    if (!email || !password) return handlerError(res, 400, errorsConstants.inputRequired);
+    email, password;
+    if (!email || !password)
+      return handlerError(res, 400, errorsConstants.inputRequired);
 
     const userData = await userService.loginUser(email, password);
 
     if (!userData) return handlerError(res, 401, errorsConstants.unauthorized);
-    
+
     res.status(200).send(userData);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
@@ -77,20 +88,132 @@ const getUserById = async (req, res) => {
   }
 };
 
+const uploadToCloudinary = (file, folder) => {
+  return new Promise((resolve, reject) => {
+    const stream = uploader.upload_stream(
+      { folder, resource_type: "auto" },
+      (error, result) => {
+        if (result) resolve(result);
+        else reject(error);
+      }
+    );
+    streamifier.createReadStream(file.data).pipe(stream);
+  });
+};
+
+const updateUserFiles = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await userService.getUserById(userId);
+
+    if (!user) {
+      return handlerError(res, 404, errorsConstants.userNotFound);
+    }
+
+    const updateData = {};
+    const allowedImageExts = ["jpg", "jpeg", "png", "webp"];
+    const allowedResumeExts = ["pdf"];
+
+    // 🧾 Subir hoja de vida
+    if (req.files?.resume) {
+      const resume = req.files.resume;
+      const resumeExt = resume.name.split(".").pop().toLowerCase();
+
+      if (!allowedResumeExts.includes(resumeExt)) {
+        return handlerError(
+          res,
+          400,
+          "La hoja de vida debe ser un archivo PDF."
+        );
+      }
+
+      if (user.resumePublicId) {
+        await uploader.destroy(user.resumePublicId, {
+          resource_type: "raw", // 👈 para archivos PDF
+        });
+      }
+
+      const uploadResume = () =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: "resumes",
+              resource_type: "auto", // permite imágenes y PDFs
+              access_mode: "public",
+              public_id: `resume_${userId}`,
+            },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+          streamifier.createReadStream(resume.data).pipe(stream);
+        });
+
+      const resumeResult = await uploadResume();
+      updateData.resume = resumeResult.secure_url;
+      updateData.resumePublicId = resumeResult.public_id;
+    }
+
+    // 🖼 Subir imagen de perfil
+    if (req.files?.image) {
+      const image = req.files.image;
+      const imageExt = image.name.split(".").pop().toLowerCase();
+
+      if (!allowedImageExts.includes(imageExt)) {
+        return handlerError(res, 400, "La imagen debe ser JPG o PNG.");
+      }
+
+      if (user.imagePublicId) {
+        await uploader.destroy(user.imagePublicId, {
+          resource_type: "image",
+        });
+      }
+
+      const uploadImage = () =>
+        new Promise((resolve, reject) => {
+          const stream = uploader.upload_stream(
+            {
+              folder: "profile_images",
+              resource_type: "image",
+              access_mode: "public",
+              public_id: `profile_${userId}`,
+            },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+          streamifier.createReadStream(image.data).pipe(stream);
+        });
+
+      const imageResult = await uploadImage();
+      updateData.profileImage = imageResult.secure_url;
+      updateData.imagePublicId = imageResult.public_id;
+    }
+
+    const updatedUser = await userService.updateUserFile(userId, updateData);
+    return res.status(200).send(updatedUser);
+  } catch (error) {
+    console.error("Error en updateUserFiles:", error);
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
 // Actualizar usuario (solo el propio usuario o admin puede hacerlo)
 const updateUser = async (req, res) => {
   try {
     const { userId } = req.params;
     const loggedUser = req.user;
     const body = req.body;
-    
-  
+
     if (loggedUser.role === "student" && loggedUser.id.toString() !== userId) {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
 
     const updatedUser = await userService.updateUser(userId, body);
-    if (!updatedUser) return handlerError(res, 404, errorsConstants.userNotFound);
+    if (!updatedUser)
+      return handlerError(res, 404, errorsConstants.userNotFound);
 
     res.status(200).json(updatedUser);
   } catch (error) {
@@ -102,15 +225,18 @@ const deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
     const loggedUser = req.user;
-    const { deleteStatus } = req.body; 
+    const { deleteStatus } = req.body;
     if (loggedUser.role !== "admin") {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
 
     const deletedUser = await userService.deleteUser(userId, deleteStatus);
-    if (!deletedUser) return handlerError(res, 404, errorsConstants.userNotFound);
+    if (!deletedUser)
+      return handlerError(res, 404, errorsConstants.userNotFound);
 
-    res.status(200).send({ success: true, message: "Usuario eliminado correctamente." });
+    res
+      .status(200)
+      .send({ success: true, message: "Usuario eliminado correctamente." });
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
@@ -126,9 +252,17 @@ const disableUser = async (req, res) => {
     }
 
     const updatedUser = await userService.disableUser(userId, enable);
-    if (!updatedUser) return handlerError(res, 404, errorsConstants.userNotFound);
+    if (!updatedUser)
+      return handlerError(res, 404, errorsConstants.userNotFound);
 
-    return res.status(200).send({ success: true, message: `Usuario ${enable ? "habilitado" : "deshabilitado"} correctamente.` });
+    return res
+      .status(200)
+      .send({
+        success: true,
+        message: `Usuario ${
+          enable ? "habilitado" : "deshabilitado"
+        } correctamente.`,
+      });
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
@@ -147,14 +281,14 @@ const sendWelcomeEmail = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
   try {
-      const { email } = req.body;
+    const { email } = req.body;
 
-      if (!email) { 
-        return handlerError(res, 400, errorsConstants.inputRequired);
-      }
+    if (!email) {
+      return handlerError(res, 400, errorsConstants.inputRequired);
+    }
 
-      const response = await userService.forgotPassword(email);
-      return res.status(200).send(response);
+    const response = await userService.forgotPassword(email);
+    return res.status(200).send(response);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
@@ -176,11 +310,10 @@ const recoveryPassword = async (req, res) => {
     if (!decodedToken || !decodedToken.payload.id) {
       return res.status(401).send(errorsConstants.expiredToken);
     }
-    const userId = decodedToken.payload.id
+    const userId = decodedToken.payload.id;
 
     const response = await userService.recoveryPassword(userId, password);
     return res.status(200).send(response);
-    
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
@@ -197,4 +330,6 @@ module.exports = {
   forgotPassword,
   recoveryPassword,
   deleteUser,
+  updateUserFiles,
+  uploadToCloudinary,
 };

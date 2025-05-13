@@ -7,6 +7,7 @@ const topicSchema = new mongoose.Schema(
     delete: { type: Boolean, default: false }, // Si el tema está eliminado o no
     description: { type: String, required: true },
     keywords: { type: [String], required: true }, // Palabras clave para la búsqueda
+    publicId: { type: String, required: true }, // ID público de Cloudinary
   },
   { timestamps: true }
 );
