@@ -24,7 +24,7 @@ class EmailService {
 
     async sendEmail(to, subject, text, html) {
         try {
-            //console.log(`Enviando correo a: ${to}`);
+            
             const mail = await this.transporter.sendMail({
                 from: "Bienestar Universitario UFPS noreply@bienestarufps.com",
                 to,
@@ -33,7 +33,7 @@ class EmailService {
                 html,
             });
             
-           // console.log(`Correo enviado con éxito: ${mail.envelope.from}`);
+           
             return mail;
         } catch (error) {
             console.error("Error enviando correo:", error);
@@ -43,7 +43,7 @@ class EmailService {
 
 
     async forgotPassword(user, hash) {
-        //console.log(`Enviando correo de recuperación a ${user.email}`);
+        
         await this.sendEmail(user.email, "Restablecer contraseña", "", forgot_password(user, hash));
     }
 }

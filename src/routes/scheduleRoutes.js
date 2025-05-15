@@ -3,7 +3,10 @@ const scheduleController = require ("../controllers/scheduleController");
 const router = express.Router();
 const Auth = require("../middlewares/authMiddleware");
 
-
+router.get("/total-advisories", Auth, scheduleController.getTotalAdvisories);
+router.get("/attendance-percentage", Auth, scheduleController.getAttendancePercentage);
+router.get("/monthly-advisories", Auth, scheduleController.getMonthlyAdvisories);
+router.get("/most-active-advisor", Auth, scheduleController.getMostActiveAdvisor);
 router.get("/students-by-advisory", Auth, scheduleController.getStudentsByAdvisory);
 router.get("/schedules-by-advisor", Auth, scheduleController.getSchedulesByAdvisor);
 router.get("/attendance-per-schedule", Auth, scheduleController.getAttendancePerSchedule);

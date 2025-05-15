@@ -6,7 +6,7 @@ exports.createSchedule = async (req, res) => {
   try {
  
     const { studentId, topic, advisoryId } = req.body;
-    console.log(studentId, topic, advisoryId);
+
     if (!studentId || !topic || !advisoryId) {
       return handlerError(res, 400, errorsConstants.inputRequired);
     }
@@ -186,7 +186,6 @@ exports.getStudentsScheduledToday = async (req, res) => {
 exports.getSchedulesByAdvisor = async (req, res) => {
   try {
     const result = await ScheduleService.getAttendedSchedulesByAdvisor();
-    console.log(result);
     if(!result || result.length === 0) {
       return handlerError(res, 404, errorsConstants.schedulesEmpty);
     }
@@ -229,7 +228,7 @@ exports.getSchedulesByMonth = async (req, res) => {
 // Obtener cantidad de asesorías por día de la semana
 exports.getSchedulesByDay = async (req, res) => {
   try {
-    const result = await ScheduleService.getSchedulesByDay();
+    const result = await ScheduleService.getSchedulesByDays();
     return res.status(200).send(result);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
@@ -239,9 +238,45 @@ exports.getSchedulesByDay = async (req, res) => {
 // Obtener cantidad de asesorías por año
 exports.getSchedulesByYear = async (req, res) => {
   try {
-    const result = await ScheduleService.getSchedulesByYear();
+    const result = await ScheduleService.getSchedulesByLastYearByMonth();
     return res.status(200).send(result);
   } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+exports.getTotalAdvisories = async (req, res) => {
+  try {
+    const total = await ScheduleService.fetchTotalAdvisories();
+    res.status(200).send({total});
+  } catch (err) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+exports.getAttendancePercentage = async (req, res) => {
+  try {
+    const percentage = await ScheduleService.fetchAttendancePercentage();
+    res.status(200).send( {percentage} );
+  } catch (err) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+exports.getMonthlyAdvisories = async (req, res) => {
+  try {
+    const total = await ScheduleService.fetchMonthlyAdvisories();
+    res.status(200).send( {total} );
+  } catch (err) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+exports.getMostActiveAdvisor = async (req, res) => {
+  try {
+    const advisor = await ScheduleService.fetchMostActiveAdvisor();
+    res.status(200).send( {advisor} );
+  } catch (err) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };

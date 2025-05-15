@@ -5,6 +5,7 @@ const JwtService = require("../services/jwt");
 const streamifier = require("streamifier");
 const { uploader } = require("cloudinary").v2;
 const cloudinary = require("../config/cloudinary");
+const XLSX = require("xlsx");
 // Registro de usuario
 const register = async (req, res) => {
   try {
@@ -50,6 +51,34 @@ const login = async (req, res) => {
 
     res.status(200).send(userData);
   } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+const importUsersFromFile = async (req, res) => {
+  try {
+   if (req.user.role !== "admin") {
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
+    const file = req.files?.file;
+    if (!file) {
+      return handlerError(res, 400, "No se ha proporcionado ningún archivo.");
+    }
+    
+    const allowedExts = ["xlsx", "xls", "csv"];
+    const ext = file.name.split(".").pop().toLowerCase();
+    if (!allowedExts.includes(ext)) {
+      return handlerError(res, 400, "Extensión no permitida.");
+    }
+    
+    const workbook = XLSX.read(file.data, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    const result = await userService.bulkRegisterUsers(rows);
+    return res.status(200).send(result);
+  } catch (error) {
+    console.error("Error en importUsersFromFile:", error);
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
@@ -332,4 +361,5 @@ module.exports = {
   deleteUser,
   updateUserFiles,
   uploadToCloudinary,
+  importUsersFromFile
 };

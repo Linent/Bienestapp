@@ -1,57 +1,44 @@
 const Schedule = require("../models/Schedule");
 const Advisory = require("../models/Advisory");
+const User = require("../models/User");
 const { getNextMatchingDate } = require("../helpers/dateHelper");
 const { DateTime } = require("luxon");
-
-
-
+const { startOfYear, subYears } = require("date-fns");
 exports.createSchedule = async (studentId, topic, advisoryId) => {
   try {
     const advisory = await Advisory.findById(advisoryId);
     if (!advisory) throw new Error("No se encontró la asesoría.");
 
-    const advisoryDay = advisory.day;
+    // Obtener fecha exacta de la asesoría (día y hora)
+    const advisoryDay = advisory.day; // Ej: "Monday"
     const advisoryHour = DateTime.fromJSDate(advisory.dateStart)
       .setZone("America/Bogota")
       .toFormat("HH:mm");
 
-    const baseDate = getNextMatchingDate(advisoryDay, advisoryHour);
+    // Calcular la próxima fecha en que se repite esa asesoría
+    const nextDate = getNextMatchingDate(advisoryDay, advisoryHour);
 
-    const schedules = await Schedule.find({
+    // Contar cuántos estudiantes ya están agendados para esa fecha exacta
+    const count = await Schedule.countDocuments({
       AdvisoryId: advisoryId,
-      dateStart: {
-        $gte: baseDate.startOf("day").toJSDate(),
-        $lte: baseDate.endOf("day").toJSDate(),
-      }
-    }).sort("dateStart");
+      dateStart: nextDate.toJSDate(),
+    });
 
-    if (schedules.length >= 4) throw new Error("No hay cupos disponibles para esta asesoría.");
-
-    const occupiedSlots = schedules.map(s => DateTime.fromJSDate(s.dateStart).toISO());
-
-    let slot = baseDate;
-    const end = slot.plus({ hours: 2 });
-    let selectedSlot = null;
-
-    while (slot < end) {
-      if (!occupiedSlots.includes(slot.toISO()) && slot > DateTime.now()) {
-        selectedSlot = slot;
-        break;
-      }
-      slot = slot.plus({ minutes: 30 });
+    if (count >= 10) {
+      throw new Error("No hay cupos disponibles para esta asesoría.");
     }
 
-    if (!selectedSlot) throw new Error("No hay horarios disponibles.");
-
+    // Crear nuevo agendamiento en esa misma hora
     const newSchedule = new Schedule({
       studentId,
       topic,
       AdvisoryId: advisoryId,
-      dateStart: selectedSlot.toJSDate(),
+      dateStart: nextDate.toJSDate(), // siempre la misma hora
     });
 
     await newSchedule.save();
     return newSchedule;
+
   } catch (error) {
     throw new Error("Error al agendar: " + error.message);
   }
@@ -248,7 +235,7 @@ exports.getAttendedSchedulesByAdvisor = async () => {
       },
       { $sort: { count: -1 } },
     ]);
-    console.log(result);
+
     return result;
   } catch (error) {
     throw new Error(
@@ -302,21 +289,176 @@ exports.getSchedulesByTopic = async () => {
 
 // Obtener cantidad de asesorías por mes
 exports.getSchedulesByMonth = async () => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
   return await Schedule.aggregate([
-    { $group: { _id: { $month: "$createdAt" }, count: { $sum: 1 } } },
+    {
+      $match: {
+        createdAt: { $gte: thirtyDaysAgo },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: "$createdAt" },
+          month: { $month: "$createdAt" },
+          day: { $dayOfMonth: "$createdAt" },
+        },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: {
+        "_id.year": 1,
+        "_id.month": 1,
+        "_id.day": 1,
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        year: "$_id.year",
+        month: "$_id.month",
+        day: "$_id.day",
+        count: 1,
+      },
+    },
   ]);
 };
 
 // Obtener cantidad de asesorías por día de la semana
-exports.getSchedulesByDay = async () => {
+// Agrupar por día (fecha completa) y contar cuántas asesorías se agendaron ese día
+exports.getSchedulesByDays = async () => {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
   return await Schedule.aggregate([
-    { $group: { _id: { $dayOfWeek: "$createdAt" }, count: { $sum: 1 } } },
+    {
+      $match: {
+        createdAt: { $gte: sevenDaysAgo }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: "$createdAt" },
+          month: { $month: "$createdAt" },
+          day: { $dayOfMonth: "$createdAt" }
+        },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: {
+        "_id.year": 1,
+        "_id.month": 1,
+        "_id.day": 1
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        year: "$_id.year",
+        month: "$_id.month",
+        day: "$_id.day",
+        count: 1
+      }
+    }
   ]);
 };
 
+
 // Obtener cantidad de asesorías por año
-exports.getSchedulesByYear = async () => {
+exports.getSchedulesByLastYearByMonth = async () => {
+  const oneYearAgo = subYears(new Date(), 1);
+
   return await Schedule.aggregate([
-    { $group: { _id: { $year: "$createdAt" }, count: { $sum: 1 } } },
+    {
+      $match: {
+        createdAt: { $gte: oneYearAgo }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: "$createdAt" },
+          month: { $month: "$createdAt" }
+        },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { "_id.year": 1, "_id.month": 1 }
+    },
+    {
+      $project: {
+        _id: 0,
+        year: "$_id.year",
+        month: "$_id.month",
+        count: 1
+      }
+    }
   ]);
+};
+
+exports.fetchTotalAdvisories = async () => {
+  return await Schedule.countDocuments();
+};
+
+exports.fetchAttendancePercentage = async () => {
+  const total = await Schedule.countDocuments();
+  if (total === 0) return 0;
+
+  const attended = await Schedule.countDocuments({ attendance: true });
+  return ((attended / total) * 100).toFixed(1);
+};
+
+exports.fetchMonthlyAdvisories = async () => {
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  return await Schedule.countDocuments({
+    createdAt: { $gte: firstDay, $lte: lastDay },
+  });
+};
+
+exports.fetchMostActiveAdvisor = async () => {
+  const result = await Schedule.aggregate([
+    {
+      $group: {
+        _id: "$AdvisoryId",
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { count: -1 } },
+    { $limit: 1 },
+    {
+      $lookup: {
+        from: "advisories",
+        localField: "_id",
+        foreignField: "_id",
+        as: "advisory",
+      },
+    },
+    { $unwind: "$advisory" },
+    {
+      $lookup: {
+        from: "users",
+        localField: "advisory.advisorId",
+        foreignField: "_id",
+        as: "advisor",
+      },
+    },
+    { $unwind: "$advisor" },
+    {
+      $project: {
+        name: "$advisor.name",
+        total: "$count",
+      },
+    },
+  ]);
+
+  return result[0] || { name: "Sin datos", total: 0 };
 };

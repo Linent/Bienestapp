@@ -32,6 +32,7 @@ tags:
     description: Rutas de agendamiento de asesorías
   - name: Topics
     description: Rutas de temas
+  - name: Reportes
 security:
   - ApiKeyAuth: []
 paths:
@@ -358,6 +359,56 @@ paths:
           description: No autorizado
         404:
           description: Usuario no encontrado
+        500:
+          description: Error interno del servidor
+  /user/import:
+    post:
+      summary: Importar usuarios académicos desde archivo Excel o CSV
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Archivo Excel o CSV (.xlsx, .xls, .csv) con los datos de los usuarios
+      responses:
+        200:
+          description: Usuarios importados exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  created:
+                    type: integer
+                    example: 5
+                  skipped:
+                    type: integer
+                    example: 2
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        row:
+                          type: object
+                          description: Fila del archivo con error
+                        error:
+                          type: string
+                          description: Mensaje de error asociado
+        400:
+          description: Archivo no proporcionado o formato inválido
+        403:
+          description: No autorizado – solo administradores pueden importar
         500:
           description: Error interno del servidor
   /advisory/advisor/{advisorId}:
@@ -1096,3 +1147,82 @@ paths:
       responses:
         "200":
           description: Tema eliminado correctamente
+  /schedules/total-advisories:
+    get:
+      summary: Obtener total de asesorías registradas
+      tags:
+        - Reportes
+      responses:
+        "200":
+          description: Total de asesorías
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 120
+        "500":
+          description: Error en el servidor
+
+  /schedules/attendance-percentage:
+    get:
+      summary: Obtener porcentaje global de asistencia
+      tags:
+        - Reportes
+      responses:
+        "200":
+          description: Porcentaje de asistencia
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  percentage:
+                    type: number
+                    format: float
+                    example: 85.5
+        "500":
+          description: Error en el servidor
+
+  /schedules/monthly-advisories:
+    get:
+      summary: Obtener cantidad de asesorías del mes actual
+      tags:
+        - Reportes
+      responses:
+        "200":
+          description: Total mensual de asesorías
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 40
+        "500":
+          description: Error en el servidor
+
+  /schedules/most-active-advisor:
+    get:
+      summary: Obtener asesor con más asesorías registradas
+      tags:
+        - Reportes
+      responses:
+        "200":
+          description: Asesor más activo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "Juan Pérez"
+                  total:
+                    type: integer
+                    example: 12
+        "500":
+          description: Error en el servidor

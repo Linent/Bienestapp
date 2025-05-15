@@ -4,13 +4,14 @@ const JwtService = require("./jwt");
 const welcomeTemplate = require("../emails/welcome_user");
 const EmailService = require("../config/emailConfig");
 const { errorsConstants } = require("../constants/errors.constant");
+const Career = require("../models/Career");
 
 exports.registerUser = async (name, email, password, role, career, codigo) => {
   try {
     const existingUser = await User.findOne({
       $or: [{ email }, { codigo }],
     });
-    console.log("existingUser", existingUser);
+    
     if (existingUser) {
       return errorsConstants.userExist;
     }
@@ -49,6 +50,61 @@ exports.loginUser = async (email, password) => {
   const token = jwtService.generateToken({ id: user._id, role: user.role });
 
   return { user, token };
+};
+
+exports.bulkRegisterUsers = async (rows) => {
+  
+  let created = 0;
+  let skipped = 0;
+  let errors = [];
+
+  for (const row of rows) {
+    const { Nombre, Correo, Código } = row;
+
+    if (!Nombre || !Correo || !Código) {
+      skipped++;
+      errors.push({ row, error: "Faltan campos obligatorios." });
+      continue;
+    }
+
+    const codigo = String(Código);
+    const careerPrefix = codigo.substring(0, 3); // extrae los 3 primeros caracteres
+
+    const career = await Career.findOne({ code: careerPrefix }); // se asume que usas un campo 'code' en Career
+    if (!career) {
+      skipped++;
+      errors.push({ row, error: `No se encontró carrera con código: ${careerPrefix}` });
+      continue;
+    }
+
+    try {
+      const result = await exports.registerUser(
+        Nombre,
+        Correo,
+        codigo,
+        "academic_friend",
+        career._id,
+        codigo
+      );
+
+      if (typeof result !== "string") {
+        created++;
+      } else {
+        skipped++;
+        errors.push({ row, error: result });
+      }
+    } catch (err) {
+      skipped++;
+      errors.push({ row, error: err.message });
+    }
+  }
+
+  return {
+    success: true,
+    created,
+    skipped,
+    errors,
+  };
 };
 
 exports.getAllUsers = async () => {
