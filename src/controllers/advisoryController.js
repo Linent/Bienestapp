@@ -148,9 +148,7 @@ exports.getAdvisoriesByAdvisor = async (req, res) => {
     }
 
     const advisories = await advisoryService.getAdvisoriesByAdvisor(advisorId);
-    if (!advisories || advisories.length === 0) {
-      return handlerError(res, 404, errorsConstants.advisoryEmpty);
-    }
+    
 
     return res.status(200).send(advisories);
   } catch (error) {

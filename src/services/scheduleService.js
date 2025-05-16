@@ -38,15 +38,12 @@ exports.createSchedule = async (studentId, topic, advisoryId) => {
 
     await newSchedule.save();
     return newSchedule;
-
   } catch (error) {
     throw new Error("Error al agendar: " + error.message);
   }
 };
 
 // Ayuda: función para obtener la próxima fecha con ese día de la semana
-
-
 
 exports.getSchedules = async () => {
   try {
@@ -68,7 +65,11 @@ exports.getSchedules = async () => {
 
 exports.getStudentsByAdvisorAndDate = async (advisoryId, day, dateStart) => {
   const advisorySchedules = await Schedule.find({ AdvisoryId: advisoryId })
-    .populate({ path: "AdvisoryId", select: "dateStart advisorId day", populate: {path:"advisorId", select:"name email"} })
+    .populate({
+      path: "AdvisoryId",
+      select: "dateStart advisorId day",
+      populate: { path: "advisorId", select: "name email" },
+    })
     .populate({
       path: "studentId",
       select: "name codigo email career",
@@ -76,21 +77,25 @@ exports.getStudentsByAdvisorAndDate = async (advisoryId, day, dateStart) => {
     });
 
   const filteredSchedules = advisorySchedules.filter((schedule) => {
-  const advisory = schedule.AdvisoryId;
-  if (!advisory || !schedule.dateStart) return false;
+    const advisory = schedule.AdvisoryId;
+    if (!advisory || !schedule.dateStart) return false;
 
-  const advisoryDay = advisory.day.toLowerCase();
+    const advisoryDay = advisory.day.toLowerCase();
 
-  const scheduleTime = DateTime.fromJSDate(schedule.dateStart).toUTC().startOf("minute");
-  const queryStartTime = DateTime.fromISO(dateStart).toUTC().startOf("minute");
-  const queryEndTime = queryStartTime.plus({ hours: 2 });
+    const scheduleTime = DateTime.fromJSDate(schedule.dateStart)
+      .toUTC()
+      .startOf("minute");
+    const queryStartTime = DateTime.fromISO(dateStart)
+      .toUTC()
+      .startOf("minute");
+    const queryEndTime = queryStartTime.plus({ hours: 2 });
 
-  return (
-    advisoryDay === day.toLowerCase() &&
-    scheduleTime >= queryStartTime &&
-    scheduleTime < queryEndTime
-  );
-});
+    return (
+      advisoryDay === day.toLowerCase() &&
+      scheduleTime >= queryStartTime &&
+      scheduleTime < queryEndTime
+    );
+  });
 
   return filteredSchedules;
 };
@@ -244,6 +249,69 @@ exports.getAttendedSchedulesByAdvisor = async () => {
   }
 };
 
+exports.getAttendedSchedulesByAdvisorAll = async (startDate, endDate) => {
+  try {
+    const matchDateFilter = {
+      ...(startDate && endDate && {
+        createdAt: {
+          $gte: new Date(startDate),
+          $lte: new Date(endDate)
+        }
+      })
+    };
+
+    const result = await User.aggregate([
+      { $match: { role: "academic_friend" } },
+      {
+        $lookup: {
+          from: "advisories",
+          localField: "_id",
+          foreignField: "advisorId",
+          as: "advisories"
+        }
+      },
+      { $unwind: { path: "$advisories", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "schedules",
+          let: { advisoryId: "$advisories._id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$AdvisoryId", "$$advisoryId"] },
+                ...matchDateFilter,
+                attendance: true
+              }
+            }
+          ],
+          as: "attendedSchedules"
+        }
+      },
+      {
+        $group: {
+          _id: "$_id",
+          advisorName: { $first: "$name" },
+          profileImage: { $first: "$profileImage" },
+          count: { $sum: { $size: "$attendedSchedules" } }
+        }
+      },
+      {
+        $project: {
+          advisorId: "$_id",
+          advisorName: 1,
+          profileImage: 1,
+          count: 1,
+          _id: 0
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    return result;
+  } catch (error) {
+    throw new Error("Error al obtener asesorías atendidas por asesor: " + error.message);
+  }
+};
 // Obtener promedio de asistencia por asesoría
 exports.getAttendancePerSchedule = async () => {
   return await Schedule.aggregate([
@@ -295,15 +363,15 @@ exports.getSchedulesByMonth = async () => {
   return await Schedule.aggregate([
     {
       $match: {
-        createdAt: { $gte: thirtyDaysAgo },
+        dateStart: { $gte: thirtyDaysAgo },
       },
     },
     {
       $group: {
         _id: {
-          year: { $year: "$createdAt" },
-          month: { $month: "$createdAt" },
-          day: { $dayOfMonth: "$createdAt" },
+          year: { $year: "$dateStart" },
+          month: { $month: "$dateStart" },
+          day: { $dayOfMonth: "$dateStart" },
         },
         count: { $sum: 1 },
       },
@@ -336,25 +404,25 @@ exports.getSchedulesByDays = async () => {
   return await Schedule.aggregate([
     {
       $match: {
-        createdAt: { $gte: sevenDaysAgo }
-      }
+        dateStart: { $gte: sevenDaysAgo },
+      },
     },
     {
       $group: {
         _id: {
-          year: { $year: "$createdAt" },
-          month: { $month: "$createdAt" },
-          day: { $dayOfMonth: "$createdAt" }
+          year: { $year: "$dateStart" },
+          month: { $month: "$dateStart" },
+          day: { $dayOfMonth: "$dateStart" },
         },
-        count: { $sum: 1 }
-      }
+        count: { $sum: 1 },
+      },
     },
     {
       $sort: {
         "_id.year": 1,
         "_id.month": 1,
-        "_id.day": 1
-      }
+        "_id.day": 1,
+      },
     },
     {
       $project: {
@@ -362,12 +430,11 @@ exports.getSchedulesByDays = async () => {
         year: "$_id.year",
         month: "$_id.month",
         day: "$_id.day",
-        count: 1
-      }
-    }
+        count: 1,
+      },
+    },
   ]);
 };
-
 
 // Obtener cantidad de asesorías por año
 exports.getSchedulesByLastYearByMonth = async () => {
@@ -376,29 +443,29 @@ exports.getSchedulesByLastYearByMonth = async () => {
   return await Schedule.aggregate([
     {
       $match: {
-        createdAt: { $gte: oneYearAgo }
-      }
+        dateStart: { $gte: oneYearAgo },
+      },
     },
     {
       $group: {
         _id: {
-          year: { $year: "$createdAt" },
-          month: { $month: "$createdAt" }
+          year: { $year: "$dateStart" },
+          month: { $month: "$dateStart" },
         },
-        count: { $sum: 1 }
-      }
+        count: { $sum: 1 },
+      },
     },
     {
-      $sort: { "_id.year": 1, "_id.month": 1 }
+      $sort: { "_id.year": 1, "_id.month": 1 },
     },
     {
       $project: {
         _id: 0,
         year: "$_id.year",
         month: "$_id.month",
-        count: 1
-      }
-    }
+        count: 1,
+      },
+    },
   ]);
 };
 

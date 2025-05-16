@@ -1,14 +1,15 @@
 const advisoryService = require("./advisoryService");
 const whatsappService = require("./whatsappService");
 const userService = require("./userService");
+const userInfoService = require("./userInfoService");
 const scheduleService = require("./scheduleService");
 const careerService = require("./CareerService");
-const openAiService = require("./openAiService");
+//const openAiService = require("./openAiService");
 const { loadPDFContent } = require("../utils/loadPdfContent");
 const askGemini = require("./geminiService");
 const Topic = require("../services/topicService");
 const config = require("../config/config");
-const path = require("path");
+const { DOCUMENT_TYPES, BENEFICIARY_TYPES } = require("../constants/userEnums");
 const { mapNumberToKeyword } = require("../utils/mapNumberToKeyWord");
 
 const BASE_URL = config.API_BASE_URL;
@@ -17,6 +18,7 @@ class MessageHandler {
   constructor() {
     this.appointmentState = {};
     this.assistandState = {};
+    this.userInfoState = {};
   }
 
   async handleIncomingMessage(message, senderInfo) {
@@ -32,6 +34,8 @@ class MessageHandler {
         } else if (this.appointmentState[message.from]) {
           await this.handleAppointmentFlow(message.from, incomingMessage);
         } else if (this.assistandState[message.from]) {
+          await this.handleAssistandFlow(message.from, incomingMessage);
+        } else if (this.userInfoState[message.from]) {
           await this.handleAssistandFlow(message.from, incomingMessage);
         } else {
           const response = `Echo: ${message.text.body}`;
@@ -174,17 +178,11 @@ class MessageHandler {
         return;
 
       case "consultar servicios":
-        this.assistandState[to] = { step: "question" };
-        responseMessage =
-          `Has seleccionado consultar servicios. Estos son algunos temas sobre los que puedes preguntar:\n\n` +
-          `1 Servicio Médico\n` +
-          `2 Servicio Odontológico\n` +
-          `3 Servicio Psicológico\n` +
-          `4 Servicio Psicosocial\n` +
-          `5 Asesoría Espiritual\n` +
-          `6 Amigos Académicos\n` +
-          `Bienestar Universitario \n` +
-          `¿Sobre qué necesitas saber más?`;
+        if (!this.userInfoState[to]) {
+          this.userInfoState[to] = { step: "fullName", data: { phone: to } };
+          responseMessage =
+            "Has seleccionado consultar servicios.\n\n📋 Antes de continuar, necesitamos algunos datos básicos.\n\n👤 Por favor, indícanos tu *nombre completo*.";
+        }
         break;
 
       default:
@@ -419,7 +417,6 @@ class MessageHandler {
     await whatsappService.markAsRead(message.id);
   } */
   async handleAssistandFlow(to, message) {
-    const state = this.assistandState[to];
     const menuMessage = "¿La respuesta fue de tu ayuda?";
     const buttons = [
       {
@@ -434,45 +431,195 @@ class MessageHandler {
 
     let responseMessage = "";
 
+    const normalize = (text) =>
+      text
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
     try {
-      if (state.step === "question") {
-        // Buscar el tema relacionado con la palabra clave
-        let keyword = mapNumberToKeyword(message) || message;
+      if (!this.userInfoState[to] && !this.assistandState[to]) {
+        this.userInfoState[to] = { step: "fullName", data: { phone: to } };
+        await whatsappService.sendMessage(
+          to,
+          "👤 Por favor, indícanos tu *nombre completo*."
+        );
+        return;
+      }
+
+      const state = this.userInfoState[to];
+
+      if (state) {
+        switch (state.step) {
+          case "fullName":
+            state.data.fullName = message;
+            state.step = "documentType";
+            await whatsappService.sendMessage(
+              to,
+              `🪪 ¿Cuál es tu *tipo de documento*?\n\nOpciones:\n${DOCUMENT_TYPES.map(
+                (t) => `- ${t}`
+              ).join("\n")}`
+            );
+            return;
+
+          case "documentType": {
+            const input = normalize(message.trim());
+            const matched = DOCUMENT_TYPES.find((t) =>
+              normalize(t).includes(input)
+            );
+            if (!matched) {
+              await whatsappService.sendMessage(
+                to,
+                "❌ Tipo de documento no válido. Intenta usar una opción válida como 'cédula', 'pasaporte', etc."
+              );
+              return;
+            }
+            state.data.documentType = matched;
+            state.step = "documentNumber";
+            await whatsappService.sendMessage(
+              to,
+              "🔢 Ingresa tu *número de documento* (sin puntos ni espacios):"
+            );
+            return;
+          }
+
+          case "documentNumber":
+            state.data.documentNumber = message.trim();
+            state.step = "ufpsCode";
+            await whatsappService.sendMessage(
+              to,
+              "🎓 Ingresa tu *código UFPS* (o tu número de documento si no tienes uno):"
+            );
+            return;
+
+          case "ufpsCode":
+            state.data.ufpsCode = message.trim();
+            state.step = "beneficiaryType";
+            await whatsappService.sendMessage(
+              to,
+              `👥 ¿Cuál es tu *tipo de beneficiario*?\n\nOpciones:\n${BENEFICIARY_TYPES.map(
+                (t) => `- ${t}`
+              ).join("\n")}`
+            );
+            return;
+
+          case "beneficiaryType": {
+            const input = normalize(message.trim());
+            const matched = BENEFICIARY_TYPES.find((t) =>
+              normalize(t).includes(input)
+            );
+
+            if (!matched) {
+              await whatsappService.sendMessage(
+                to,
+                "❌ Tipo de beneficiario no válido. Intenta usar una de las opciones válidas como 'estudiante', 'egresado', 'externo', etc."
+              );
+              return;
+            }
+
+            state.data.beneficiaryType = matched;
+
+            // Si es externo, asignar directamente "ninguno"
+            if (matched === "Externo(a) a la UFPS") {
+              state.data.academicProgram = "Ninguno";
+
+              try {
+                await userInfoService.registerUserInfo(state.data);
+                console.log("✅ Usuario registrado:", state.data.phone);
+              } catch (err) {
+                console.error("❌ Error al guardar userInfo:", err);
+                await whatsappService.sendMessage(
+                  to,
+                  "⚠️ Ocurrió un error al guardar tus datos. Por favor intenta más tarde."
+                );
+                delete this.userInfoState[to];
+                return;
+              }
+
+              delete this.userInfoState[to];
+              this.assistandState[to] = { step: "question" };
+
+              await whatsappService.sendMessage(
+                to,
+                `✅ Gracias ${
+                  state.data.fullName.split(" ")[0]
+                }, tus datos han sido registrados.\n\nAhora dime, ¿sobre qué servicio de Bienestar Universitario deseas preguntar?\nPuedes escribir el tema directamente o elegir entre:\n\n1. Servicio Médico\n2. Servicio Psicológico\n3. Servicio Odontológico\n4. Amigos Académicos\n5. Psicosocial\n6. Asesoría Espiritual`
+              );
+              return;
+            }
+
+            // Si NO es externo, pedir programa académico
+            state.step = "academicProgram";
+            await whatsappService.sendMessage(
+              to,
+              "🏫 ¿Cuál es tu *programa académico* o *dependencia*?"
+            );
+            return;
+          }
+
+          case "academicProgram":
+            state.data.academicProgram = message.trim();
+
+            try {
+              await userInfoService.registerUserInfo(state.data);
+              console.log("✅ Usuario registrado:", state.data.phone);
+            } catch (err) {
+              console.error("❌ Error al guardar userInfo:", err);
+              await whatsappService.sendMessage(
+                to,
+                "⚠️ Ocurrió un error al guardar tus datos. Por favor intenta más tarde."
+              );
+              delete this.userInfoState[to];
+              return;
+            }
+
+            delete this.userInfoState[to];
+            this.assistandState[to] = { step: "question" };
+
+            await whatsappService.sendMessage(
+              to,
+              `✅ Gracias ${
+                state.data.fullName.split(" ")[0]
+              }, tus datos han sido registrados.\n\nAhora dime, ¿sobre qué servicio de Bienestar Universitario deseas preguntar?\nPuedes escribir el tema directamente o elegir entre:\n\n1. Servicio Médico\n2. Servicio Psicológico\n3. Servicio Odontológico\n4. Amigos Académicos\n5. Psicosocial\n6. Asesoría Espiritual`
+            );
+            return;
+        }
+      }
+
+      // 🟢 Ya tiene los datos, procesar pregunta
+      if (this.assistandState[to]?.step === "question") {
+        const keyword = mapNumberToKeyword(message) || message;
         const topic = await Topic.getTopicsByKeyword(keyword);
 
         if (!topic) {
           responseMessage =
-            "Lo siento, no encontré información relacionada con tu consulta. Intenta reformular la pregunta.";
+            "❌ No encontré información relacionada con tu consulta. Intenta reformular la pregunta.";
         } else {
           const pdfText = await loadPDFContent(topic.filePath);
-
           try {
             responseMessage = await askGemini(message, pdfText);
           } catch (geminiError) {
             console.error("Error con Gemini:", geminiError);
-            if (geminiError.status === 429) {
-              responseMessage =
-                "⚠️ Has alcanzado el límite de consultas gratuitas. Intenta más tarde o contacta al área de Bienestar.";
-            } else {
-              responseMessage =
-                "⚠️ Lo siento, ocurrió un error al generar la respuesta. Por favor intenta de nuevo.";
-            }
+            responseMessage =
+              geminiError.status === 429
+                ? "⚠️ Has alcanzado el límite de consultas gratuitas. Intenta más tarde."
+                : "⚠️ Ocurrió un error al generar la respuesta. Intenta de nuevo.";
           }
         }
-      } else {
-        responseMessage =
-          "¿En qué puedo ayudarte con los servicios de Bienestar Universitario?";
-      }
 
-      await whatsappService.sendMessage(to, responseMessage);
-      await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+        await whatsappService.sendMessage(to, responseMessage);
+        await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+      }
     } catch (error) {
-      console.error("Error general en handleAssistandFlow:", error);
-      await whatsappService.sendMessage(
-        to,
-        "Lo sentimos, ocurrió un error inesperado al procesar tu consulta."
-      );
+      console.error("❌ Error general en handleAssistandFlow:", error);
+      await whatsappService.sendMessage(to, "⚠️ Ocurrió un error inesperado.");
     }
+  }
+  normalize(text) {
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
   }
 }
 

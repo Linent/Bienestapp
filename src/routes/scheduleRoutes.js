@@ -9,6 +9,7 @@ router.get("/monthly-advisories", Auth, scheduleController.getMonthlyAdvisories)
 router.get("/most-active-advisor", Auth, scheduleController.getMostActiveAdvisor);
 router.get("/students-by-advisory", Auth, scheduleController.getStudentsByAdvisory);
 router.get("/schedules-by-advisor", Auth, scheduleController.getSchedulesByAdvisor);
+router.get("/schedules-by-advisorAll", Auth, scheduleController.getSchedulesByAdvisorAll);
 router.get("/attendance-per-schedule", Auth, scheduleController.getAttendancePerSchedule);
 router.get("/schedules-by-topic", Auth, scheduleController.getSchedulesByTopic);
 router.get("/schedules-by-month", Auth, scheduleController.getSchedulesByMonth);

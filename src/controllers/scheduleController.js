@@ -194,6 +194,18 @@ exports.getSchedulesByAdvisor = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
+exports.getSchedulesByAdvisorAll = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const result = await ScheduleService.getAttendedSchedulesByAdvisorAll(startDate, endDate);
+    if (!result || result.length === 0) {
+      return handlerError(res, 404, errorsConstants.schedulesEmpty);
+    }
+    return res.status(200).send(result);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
 
 // Obtener promedio de asistencia por asesoría
 exports.getAttendancePerSchedule = async (req, res) => {
