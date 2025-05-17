@@ -351,6 +351,9 @@ exports.getSchedulesByTopic = async () => {
         count: 1,
       },
     },
+    {
+      $sort: { count: -1 }
+    }
   ]);
   return byTopic;
 };
