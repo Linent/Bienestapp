@@ -11,8 +11,7 @@ const Topic = require("../services/topicService");
 const config = require("../config/config");
 const { DOCUMENT_TYPES, BENEFICIARY_TYPES } = require("../constants/userEnums");
 const { mapNumberToKeyword } = require("../utils/mapNumberToKeyWord");
-
-const BASE_URL = config.API_BASE_URL;
+const userQueryService = require("./userQueryService");
 
 class MessageHandler {
   constructor() {
@@ -179,9 +178,16 @@ class MessageHandler {
 
       case "consultar servicios":
         if (!this.userInfoState[to]) {
-          this.userInfoState[to] = { step: "fullName", data: { phone: to } };
+          // ✅ El flujo debe iniciar por TIPO DE DOCUMENTO
+          this.userInfoState[to] = {
+            step: "documentType",
+            data: { phone: to },
+          };
           responseMessage =
-            "Has seleccionado consultar servicios.\n\n📋 Antes de continuar, necesitamos algunos datos básicos.\n\n👤 Por favor, indícanos tu *nombre completo*.";
+            "Has seleccionado consultar servicios.\n\n📋 Antes de continuar, necesitamos algunos datos básicos.\n\n" +
+            `🪪 ¿Cuál es tu *tipo de documento*?\n${DOCUMENT_TYPES.map(
+              (t) => `- ${t}`
+            ).join("\n")}`;
         }
         break;
 
@@ -419,17 +425,12 @@ class MessageHandler {
   async handleAssistandFlow(to, message) {
     const menuMessage = "¿La respuesta fue de tu ayuda?";
     const buttons = [
-      {
-        type: "reply",
-        reply: { id: "option_4", title: "Sí, gracias" },
-      },
+      { type: "reply", reply: { id: "option_4", title: "Sí, gracias" } },
       {
         type: "reply",
         reply: { id: "option_5", title: "Hacer otra pregunta" },
       },
     ];
-
-    let responseMessage = "";
 
     const normalize = (text) =>
       text
@@ -438,44 +439,37 @@ class MessageHandler {
         .replace(/[\u0300-\u036f]/g, "");
 
     try {
+      // Paso 1: Si no hay estado previo, iniciar preguntando el tipo de documento
       if (!this.userInfoState[to] && !this.assistandState[to]) {
-        this.userInfoState[to] = { step: "fullName", data: { phone: to } };
+        this.userInfoState[to] = { step: "documentType", data: { phone: to } };
         await whatsappService.sendMessage(
           to,
-          "👤 Por favor, indícanos tu *nombre completo*."
+          `🪪 ¿Cuál es tu *tipo de documento*?\n${DOCUMENT_TYPES.map(
+            (t) => `- ${t}`
+          ).join("\n")}`
         );
         return;
       }
 
-      const state = this.userInfoState[to];
-
-      if (state) {
-        switch (state.step) {
-          case "fullName":
-            state.data.fullName = message;
-            state.step = "documentType";
-            await whatsappService.sendMessage(
-              to,
-              `🪪 ¿Cuál es tu *tipo de documento*?\n\nOpciones:\n${DOCUMENT_TYPES.map(
-                (t) => `- ${t}`
-              ).join("\n")}`
-            );
-            return;
-
+      // Paso 2: Flujo de Onboarding (registro si no existe)
+      const uState = this.userInfoState[to];
+      if (uState) {
+        switch (uState.step) {
+          // Tipo de documento
           case "documentType": {
             const input = normalize(message.trim());
-            const matched = DOCUMENT_TYPES.find((t) =>
+            const match = DOCUMENT_TYPES.find((t) =>
               normalize(t).includes(input)
             );
-            if (!matched) {
+            if (!match) {
               await whatsappService.sendMessage(
                 to,
-                "❌ Tipo de documento no válido. Intenta usar una opción válida como 'cédula', 'pasaporte', etc."
+                "❌ Tipo de documento no válido."
               );
               return;
             }
-            state.data.documentType = matched;
-            state.step = "documentNumber";
+            uState.data.documentType = match;
+            uState.step = "documentNumber";
             await whatsappService.sendMessage(
               to,
               "🔢 Ingresa tu *número de documento* (sin puntos ni espacios):"
@@ -483,136 +477,170 @@ class MessageHandler {
             return;
           }
 
-          case "documentNumber":
-            state.data.documentNumber = message.trim();
-            state.step = "ufpsCode";
+          // Número de documento, buscar usuario en la BD
+          case "documentNumber": {
+            uState.data.documentNumber = message.trim();
+            const user = await userInfoService.getByDocumentNumber(
+              uState.data.documentNumber
+            );
+            if (user) {
+              // Si el usuario existe, salta directo a sugerir temas y preguntas
+              delete this.userInfoState[to];
+              this.assistandState[to] = { step: "question", userId: user._id };
+              await whatsappService.sendMessage(
+                to,
+                "✅ ¡Bienvenido de nuevo! ¿Sobre qué servicio deseas preguntar?\n" +
+                  "1. Servicio Médico\n2. Servicio Psicológico\n3. Servicio Odontológico\n" +
+                  "4. Amigos Académicos\n5. Psicosocial\n6. Asesoría Espiritual"
+              );
+              return;
+            }
+            // Si no existe, continuar el registro
+            uState.step = "fullName";
             await whatsappService.sendMessage(
               to,
-              "🎓 Ingresa tu *código UFPS* (o tu número de documento si no tienes uno):"
+              "👤 Por favor, indícanos tu *nombre completo*."
+            );
+            return;
+          }
+
+          // Nombre completo
+          case "fullName":
+            uState.data.fullName = message.trim();
+            uState.step = "ufpsCode";
+            await whatsappService.sendMessage(
+              to,
+              "🎓 Ingresa tu *código UFPS* (o tu documento si no tienes código):"
             );
             return;
 
+          // Código UFPS
           case "ufpsCode":
-            state.data.ufpsCode = message.trim();
-            state.step = "beneficiaryType";
+            uState.data.ufpsCode = message.trim();
+            uState.step = "beneficiaryType";
             await whatsappService.sendMessage(
               to,
-              `👥 ¿Cuál es tu *tipo de beneficiario*?\n\nOpciones:\n${BENEFICIARY_TYPES.map(
+              `👥 ¿Cuál es tu *tipo de beneficiario*?\n${BENEFICIARY_TYPES.map(
                 (t) => `- ${t}`
               ).join("\n")}`
             );
             return;
 
+          // Tipo de beneficiario
           case "beneficiaryType": {
             const input = normalize(message.trim());
-            const matched = BENEFICIARY_TYPES.find((t) =>
+            const match = BENEFICIARY_TYPES.find((t) =>
               normalize(t).includes(input)
             );
-
-            if (!matched) {
+            if (!match) {
               await whatsappService.sendMessage(
                 to,
-                "❌ Tipo de beneficiario no válido. Intenta usar una de las opciones válidas como 'estudiante', 'egresado', 'externo', etc."
+                "❌ Tipo de beneficiario no válido."
               );
               return;
             }
-
-            state.data.beneficiaryType = matched;
-
-            // Si es externo, asignar directamente "ninguno"
-            if (matched === "Externo(a) a la UFPS") {
-              state.data.academicProgram = "Ninguno";
-
-              try {
-                await userInfoService.registerUserInfo(state.data);
-                console.log("✅ Usuario registrado:", state.data.phone);
-              } catch (err) {
-                console.error("❌ Error al guardar userInfo:", err);
-                await whatsappService.sendMessage(
-                  to,
-                  "⚠️ Ocurrió un error al guardar tus datos. Por favor intenta más tarde."
-                );
-                delete this.userInfoState[to];
-                return;
-              }
-
-              delete this.userInfoState[to];
-              this.assistandState[to] = { step: "question" };
-
+            uState.data.beneficiaryType = match;
+            if (match !== "Externo(a) a la UFPS") {
+              uState.step = "academicProgram";
               await whatsappService.sendMessage(
                 to,
-                `✅ Gracias ${
-                  state.data.fullName.split(" ")[0]
-                }, tus datos han sido registrados.\n\nAhora dime, ¿sobre qué servicio de Bienestar Universitario deseas preguntar?\nPuedes escribir el tema directamente o elegir entre:\n\n1. Servicio Médico\n2. Servicio Psicológico\n3. Servicio Odontológico\n4. Amigos Académicos\n5. Psicosocial\n6. Asesoría Espiritual`
+                "🏫 ¿Cuál es tu *programa académico* o *dependencia*?"
               );
               return;
             }
-
-            // Si NO es externo, pedir programa académico
-            state.step = "academicProgram";
-            await whatsappService.sendMessage(
-              to,
-              "🏫 ¿Cuál es tu *programa académico* o *dependencia*?"
-            );
-            return;
+            uState.data.academicProgram = "Ninguno";
+            break;
           }
 
+          // Programa académico
           case "academicProgram":
-            state.data.academicProgram = message.trim();
-
-            try {
-              await userInfoService.registerUserInfo(state.data);
-              console.log("✅ Usuario registrado:", state.data.phone);
-            } catch (err) {
-              console.error("❌ Error al guardar userInfo:", err);
-              await whatsappService.sendMessage(
-                to,
-                "⚠️ Ocurrió un error al guardar tus datos. Por favor intenta más tarde."
-              );
-              delete this.userInfoState[to];
-              return;
-            }
-
-            delete this.userInfoState[to];
-            this.assistandState[to] = { step: "question" };
-
-            await whatsappService.sendMessage(
-              to,
-              `✅ Gracias ${
-                state.data.fullName.split(" ")[0]
-              }, tus datos han sido registrados.\n\nAhora dime, ¿sobre qué servicio de Bienestar Universitario deseas preguntar?\nPuedes escribir el tema directamente o elegir entre:\n\n1. Servicio Médico\n2. Servicio Psicológico\n3. Servicio Odontológico\n4. Amigos Académicos\n5. Psicosocial\n6. Asesoría Espiritual`
-            );
-            return;
+            uState.data.academicProgram = message.trim();
+            break;
         }
+
+        // Registrar el usuario y pasar al flujo de preguntas
+        const createdUser = await userInfoService.registerUserInfo(uState.data);
+        delete this.userInfoState[to];
+        this.assistandState[to] = { step: "question", userId: createdUser._id };
+
+        await whatsappService.sendMessage(
+          to,
+          `✅ Gracias ${
+            uState.data.fullName.split(" ")[0]
+          }, tus datos han sido registrados.\n\n` +
+            "¿Sobre qué servicio deseas preguntar?\n" +
+            "1. Servicio Médico\n2. Servicio Psicológico\n3. Servicio Odontológico\n" +
+            "4. Amigos Académicos\n5. Psicosocial\n6. Asesoría Espiritual"
+        );
+        return;
       }
 
-      // 🟢 Ya tiene los datos, procesar pregunta
+      // Paso 3: Flujo de consultas de preguntas (usuario ya existe)
       if (this.assistandState[to]?.step === "question") {
+        const { userId } = this.assistandState[to];
         const keyword = mapNumberToKeyword(message) || message;
-        const topic = await Topic.getTopicsByKeyword(keyword);
+        const topic =
+          await require("../services/topicService").getTopicsByKeyword(keyword);
 
+        // Guardar consulta
+        await userQueryService.saveUserQuery({
+          userId,
+          rawQuery: message,
+          topicKey: keyword,
+          topicId: topic?._id ?? null,
+        });
+
+        // Generar respuesta
+        let responseMessage = "";
         if (!topic) {
           responseMessage =
-            "❌ No encontré información relacionada con tu consulta. Intenta reformular la pregunta.";
+            "❌ No encontré información relacionada. Intenta reformular tu pregunta.";
         } else {
           const pdfText = await loadPDFContent(topic.filePath);
           try {
             responseMessage = await askGemini(message, pdfText);
-          } catch (geminiError) {
-            console.error("Error con Gemini:", geminiError);
+          } catch (e) {
+            console.error("Error con Gemini:", e);
             responseMessage =
-              geminiError.status === 429
-                ? "⚠️ Has alcanzado el límite de consultas gratuitas. Intenta más tarde."
-                : "⚠️ Ocurrió un error al generar la respuesta. Intenta de nuevo.";
+              e.status === 429
+                ? "⚠️ Límite de consultas alcanzado. Intenta más tarde."
+                : "⚠️ Error al generar la respuesta. Intenta de nuevo.";
           }
         }
 
         await whatsappService.sendMessage(to, responseMessage);
         await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+        return;
       }
-    } catch (error) {
-      console.error("❌ Error general en handleAssistandFlow:", error);
-      await whatsappService.sendMessage(to, "⚠️ Ocurrió un error inesperado.");
+    } catch (err) {
+      console.error("❌ Error en handleAssistandFlow:", err);
+      await whatsappService.sendMessage(
+        to,
+        "⚠️ Ocurrió un error inesperado. Por favor intenta de nuevo."
+      );
+    }
+  }
+  async handleAssistandFeedback(to, selectedOption) {
+    switch (selectedOption.toLowerCase()) {
+      case "sí, gracias":
+        delete this.assistandState[to];
+        await whatsappService.sendMessage(
+          to,
+          "¡Nos alegra haber sido de ayuda! 😊 Si necesitas algo más, escríbenos."
+        );
+        break;
+      case "hacer otra pregunta":
+        // Solo setea el step, mantiene userId
+        if (this.assistandState[to]) {
+          this.assistandState[to].step = "question";
+        }
+        await whatsappService.sendMessage(
+          to,
+          "Perfecto. Puedes escribirme tu nueva pregunta sobre los servicios de bienestar universitario."
+        );
+        break;
+      default:
+        await whatsappService.sendMessage(to, "No entendimos tu respuesta.");
     }
   }
   normalize(text) {

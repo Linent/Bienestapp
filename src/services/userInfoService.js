@@ -10,6 +10,14 @@ exports.registerUserInfo = async (data) => {
   }
 };
 
+/**
+ * Busca un UserInfo por número de documento.
+ * @param {string} documentNumber
+ * @returns {Promise<UserInfo|null>}
+ */
+exports.getByDocumentNumber = async (documentNumber) => {
+  return UserInfo.findOne({ documentNumber });
+}
 exports.getUserInfoAll = async () => {
    return await UserInfo.find();
 }
