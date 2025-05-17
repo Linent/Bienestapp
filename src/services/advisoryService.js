@@ -3,6 +3,7 @@ const { handlerError } = require("../handlers/errors.handlers");
 const { errorsConstants } = require("../constants/errors.constant");
 const moment = require("moment");
 const userService = require("./userService");
+const User = require("../models/User");
 
 class AdvisoryService {
   async createAdvisory(advisorId, careerId, dateStart, day, status="pending") {
@@ -77,9 +78,9 @@ class AdvisoryService {
   }
   async getAdvisoryById(advisoryId) {
     try {
-      const advisory = await Advisory.findById(advisoryId).populate(
-        "advisorId careerId"
-      );
+      const advisory = await User.findById(advisoryId)
+      .select('name career')
+      .populate('career', 'name');
       return advisory;
     } catch (error) {
       throw handlerError("Error al obtener la asesoría: " + error.message);
