@@ -14,7 +14,7 @@ const whatsappRoutes = require("./routes/whatsappRoutes.js");
 const topicRouter = require("./routes/topicRoutes.js");
 const uploadRoutes = require("./routes/uploadRoutes.js");
 const userInfoRouter = require("./routes/userInfoRoutes.js");
-const userQueryRouter = require("./routes/userQuery.js");
+const userQueryRouter = require("./routes/userQueryRoutes.js");
 
 // Swagger
 const swaggerUi = require('swagger-ui-express');
