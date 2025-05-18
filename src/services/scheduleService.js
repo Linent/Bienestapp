@@ -357,7 +357,46 @@ exports.getSchedulesByTopic = async () => {
   ]);
   return byTopic;
 };
+/**
+ * Buscar asesorías próximas para un estudiante por su código.
+ * @param {string} studentCode
+ * @returns {Promise<Array>}
+ */
+exports.getUpcomingByStudentCode = async (codigo) => {
+  // 1. Busca el usuario por el código de estudiante
+  const user = await User.findOne({ codigo });
+  if (!user) return [];
 
+  // 2. Busca asesorías futuras y no canceladas para ese estudiante
+  const now = new Date();
+
+  return Schedule.find({
+    studentId: user._id,
+    status: { $ne: "canceled" },
+    dateStart: { $gte: now }
+  })
+    .populate({
+      path: "AdvisoryId", select:"advisorId",
+      populate: {
+        path: "advisorId", // <-- esto depende de tu modelo Advisory
+        select: "name email"
+      }
+    })
+    .sort({ dateStart: 1 });
+};
+
+/**
+ * Cancela una asesoría por su ID
+ * @param {string} scheduleId
+ * @returns {Promise}
+ */
+exports.cancelSchedule = async (scheduleId) => {
+  const schedule = await Schedule.findById(scheduleId);
+  if (!schedule) throw new Error("No encontrada");
+  schedule.status = "canceled";
+  await schedule.save();
+  return schedule;
+};
 // Obtener cantidad de asesorías por mes
 exports.getSchedulesByMonth = async () => {
   const thirtyDaysAgo = new Date();

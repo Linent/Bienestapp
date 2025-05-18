@@ -3,6 +3,8 @@ const scheduleController = require ("../controllers/scheduleController");
 const router = express.Router();
 const Auth = require("../middlewares/authMiddleware");
 
+router.get("/upcoming/:studentCode", scheduleController.getUpcomingByStudentCode);
+router.post("/cancel/:scheduleId", scheduleController.cancelSchedule);
 router.get("/total-advisories", Auth, scheduleController.getTotalAdvisories);
 router.get("/attendance-percentage", Auth, scheduleController.getAttendancePercentage);
 router.get("/monthly-advisories", Auth, scheduleController.getMonthlyAdvisories);

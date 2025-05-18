@@ -206,7 +206,33 @@ exports.getSchedulesByAdvisorAll = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
+/**
+ * GET /schedules/upcoming/:studentCode
+ * Devuelve las asesorías próximas para un estudiante
+ */
+exports.getUpcomingByStudentCode = async (req, res) => {
+  try {
+    const { studentCode } = req.params;
+    const schedules = await ScheduleService.getUpcomingByStudentCode(studentCode);
+    res.json(schedules);
+  } catch (err) {
+    res.status(500).json({ message: "Error al buscar asesorías." });
+  }
+};
 
+/**
+ * POST /schedules/cancel/:scheduleId
+ * Cancela una asesoría por su ID
+ */
+exports.cancelSchedule = async (req, res) => {
+  try {
+    const { scheduleId } = req.params;
+    await ScheduleService.cancelSchedule(scheduleId);
+    res.json({ message: "Asesoría cancelada correctamente." });
+  } catch (err) {
+    res.status(404).json({ message: err.message || "Error al cancelar." });
+  }
+};
 // Obtener promedio de asistencia por asesoría
 exports.getAttendancePerSchedule = async (req, res) => {
   try {

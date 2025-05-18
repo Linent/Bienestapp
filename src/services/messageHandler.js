@@ -15,45 +15,78 @@ const userQueryService = require("./userQueryService");
 
 class MessageHandler {
   constructor() {
+    this.menuState = {};
     this.appointmentState = {};
     this.assistandState = {};
     this.userInfoState = {};
+    this.rescheduleState = {}; // Nuevo para reagendar
+    this.cancelState = {};
   }
 
   async handleIncomingMessage(message, senderInfo) {
     try {
+      // --- MENSAJE DE TEXTO ---
       if (message?.type === "text") {
         const incomingMessage = message.text.body.toLowerCase().trim();
 
+        // Saludo inicial
         if (this.isGreeting(incomingMessage)) {
           await this.sendWelcome(message.from, message.id, senderInfo);
-          await this.sendWelcomeMenu(message.from);
-        } else if (incomingMessage === "media") {
-          await this.sendMedia(message.from);
-        } else if (this.appointmentState[message.from]) {
+          // Limpiar cualquier estado previo y mostrar menú principal
+          this.menuState[message.from] = { step: "mainMenu" };
+          await this.showMainMenu(message.from);
+          return;
+        }
+        if (this.rescheduleState && this.rescheduleState[message.from]) {
+          await this.handleRescheduleFlow(message.from, incomingMessage);
+          return;
+        }
+        // ---> ¡Aquí! <---
+        // Si está en el flujo de cancelar asesoría
+        if (this.cancelState && this.cancelState[message.from]) {
+          await this.handleCancelFlow(message.from, incomingMessage);
+          return;
+        }
+        // ----
+
+        // ¿Hay un flujo activo?
+        if (this.menuState[message.from]) {
+          await this.handleMenuFlow(message.from, incomingMessage);
+          return;
+        }
+        if (this.appointmentState[message.from]) {
           await this.handleAppointmentFlow(message.from, incomingMessage);
-        } else if (this.assistandState[message.from]) {
+          return;
+        }
+        if (this.assistandState[message.from]) {
           await this.handleAssistandFlow(message.from, incomingMessage);
-        } else if (this.userInfoState[message.from]) {
+          return;
+        }
+        if (this.userInfoState[message.from]) {
           await this.handleAssistandFlow(message.from, incomingMessage);
-        } else {
-          const response = `Echo: ${message.text.body}`;
-          await whatsappService.sendMessage(message.from, response, message.id);
+          return;
         }
 
+        // Por defecto: repetir mensaje
+        const response = `Echo: ${message.text.body}`;
+        await whatsappService.sendMessage(message.from, response, message.id);
         await whatsappService.markAsRead(message.id);
-      } else if (message?.type === "interactive") {
-        const selectedOption = message.interactive?.button_reply?.title
-          ?.toLowerCase()
-          .trim();
+        return;
+      }
 
-        // ✅ Detectar retroalimentación del asistente
-        if (["sí, gracias", "hacer otra pregunta"].includes(selectedOption)) {
+      // --- MENSAJE INTERACTIVO (botón) ---
+      if (message?.type === "interactive") {
+        const selectedOption = message.interactive?.button_reply?.title?.trim();
+        // Detectar feedback del asistente
+        if (
+          ["sí, gracias", "hacer otra pregunta"].includes(
+            selectedOption?.toLowerCase()
+          )
+        ) {
           await this.handleAssistandFeedback(message.from, selectedOption);
         } else {
-          await this.handleMenuOption(message.from, selectedOption);
+          await this.handleMenuFlow(message.from, selectedOption);
         }
-
         await whatsappService.markAsRead(message.id);
       }
     } catch (error) {
@@ -198,7 +231,78 @@ class MessageHandler {
 
     await whatsappService.sendMessage(to, responseMessage);
   }
+  async showMainMenu(to) {
+    this.menuState[to] = { step: "mainMenu" };
+    const menuMessage = "¿En qué podemos ayudarte hoy?";
+    const buttons = [
+      { type: "reply", reply: { id: "option_1", title: "Amigos académicos" } },
+      {
+        type: "reply",
+        reply: { id: "option_2", title: "Consultar servicios" },
+      },
+    ];
+    await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+  }
 
+  async showAmigosMenu(to) {
+    this.menuState[to] = { step: "amigosMenu" };
+    const menuMessage = "Menú Amigos Académicos:\nSelecciona una opción:";
+    const buttons = [
+      { type: "reply", reply: { id: "option_3", title: "Agendar asesoría" } },
+      { type: "reply", reply: { id: "option_4", title: "Reagendar asesoría" } },
+      { type: "reply", reply: { id: "option_5", title: "Cancelar asesoría" } },
+    ];
+    await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+  }
+  async handleMenuFlow(to, input) {
+    // Lee el estado actual del menú
+    const state = this.menuState[to] || { step: "mainMenu" };
+    const opt = input ? input.toLowerCase().trim() : "";
+
+    // ---- MENÚ PRINCIPAL ----
+    if (state.step === "mainMenu") {
+      if (["amigos académicos", "amigos academicos", "1"].includes(opt)) {
+        await this.showAmigosMenu(to);
+        return;
+      }
+      if (["consultar servicios", "2"].includes(opt)) {
+        // Inicia el flujo de servicios (¡no cambies!)
+        delete this.menuState[to];
+        await this.handleMenuOption(to, "consultar servicios");
+        return;
+      }
+      // Si no reconoce, vuelve a mostrar menú principal
+      await this.showMainMenu(to);
+      return;
+    }
+
+    // ---- MENÚ AMIGOS ----
+    if (state.step === "amigosMenu") {
+      if (["agendar asesoría", "agendar asesoria", "1"].includes(opt)) {
+        delete this.menuState[to];
+        await this.handleMenuOption(to, "agendar asesoría");
+        return;
+      }
+      if (["reagendar asesoría", "reagendar asesoria", "2"].includes(opt)) {
+        delete this.menuState[to];
+        this.rescheduleState[to] = { step: "askCode" };
+        await this.handleRescheduleFlow(to, null);
+        return;
+      }
+      if (["cancelar asesoría", "cancelar asesoria", "3"].includes(opt)) {
+        delete this.menuState[to];
+        this.cancelState[to] = { step: "askCode" };
+        await this.handleCancelFlow(to, null);
+        return;
+      }
+      // Si no reconoce, vuelve a mostrar menú de amigos
+      await this.showAmigosMenu(to);
+      return;
+    }
+
+    // Si no reconoce el estado, vuelve al menú principal
+    await this.showMainMenu(to);
+  }
   async sendMedia(to) {
     const mediaUrl = "https://s3.amazonaws.com/gndx.dev/medpet-file.pdf"; // cambia esto por tu URL real
     const caption = "Aquí tienes un archivo PDF de ejemplo.";
@@ -222,14 +326,12 @@ class MessageHandler {
             responseMessage = "😕 No hay asesores disponibles esta semana.";
             break;
           }
-
           state.step = "selectAdvisor";
           state.advisors = advisors;
-
           responseMessage =
             "📚 *Asesores disponibles:*\n\n" +
             advisors
-              .map((a, i) => `👤 *${a.name}*\n🆔 Código: ${a.codigo}\n`)
+              .map((a) => `👤 *${a.name}*\n🆔 Código: ${a.codigo}\n`)
               .join("\n\n") +
             `\n\n✍️ Escribe el código del asesor con el que deseas agendar.`;
           break;
@@ -244,7 +346,6 @@ class MessageHandler {
               "❌ Código no válido. Por favor intenta de nuevo.";
             break;
           }
-
           state.advisor = selectedAdvisor;
           state.step = "selectDay";
           responseMessage = `✅ Seleccionaste a *${
@@ -265,19 +366,11 @@ class MessageHandler {
             responseMessage = "❌ Día no válido. Intenta nuevamente.";
             break;
           }
-
           state.selectedDay = message.trim().toLowerCase();
           state.step = "selectHour";
-
           const dayHorarios = state.advisor.horarios.filter((h) =>
             h.toLowerCase().startsWith(state.selectedDay)
           );
-
-          const horasDisponibles = dayHorarios.map((h) => {
-            const hora = h.split(" - ");
-            return hora.length > 1 ? hora[1].trim() : "Hora no definida";
-          });
-
           responseMessage =
             `⏰ Ingresa la *hora* en la que deseas agendar tu asesoría (formato 24h, ej: 14:00).\n\n` +
             `📆 *Día:* ${state.selectedDay}\n🕐 *Franja:* \n` +
@@ -292,7 +385,6 @@ class MessageHandler {
               "❌ Hora no válida. Usa el formato HH:mm (ej: 09:30).";
             break;
           }
-
           state.selectedHour = message.trim();
           state.step = "topic";
           responseMessage = "📝 ¿Cuál es el tema de la asesoría?";
@@ -301,13 +393,6 @@ class MessageHandler {
 
         case "topic": {
           state.topic = message.trim();
-          state.step = "email";
-          responseMessage = "📧 Por favor, ingresa tu correo institucional.";
-          break;
-        }
-
-        case "email": {
-          state.email = message.trim().toLowerCase();
           state.step = "codigoEstudiante";
           responseMessage =
             "🎓 Ingresa tu *código de estudiante* (Ej: 1012345678).";
@@ -331,8 +416,48 @@ class MessageHandler {
             break;
           }
 
+          // Buscar por código de estudiante
+          let student = await userService.findByStudentCode(codigoEstudiante);
+
           state.career = career._id;
           state.studentCode = codigoEstudiante;
+
+          if (student) {
+            // Agenda directamente, NO pidas más datos
+            const advisory = await advisoryService.findOneByAdvisorAndDay(
+              state.advisor.advisorCode,
+              state.selectedDay,
+              state.selectedHour
+            );
+            if (!advisory) {
+              responseMessage =
+                "⚠️ No se encontró una asesoría activa ese día. Intenta otro.";
+              break;
+            }
+            await scheduleService.createSchedule(
+              student._id,
+              state.topic,
+              advisory._id
+            );
+            responseMessage = `✅ ¡Listo ${student.name}!\nTu asesoría fue agendada con *${state.advisor.name}* el *${state.selectedDay}* a las *${state.selectedHour}* sobre *${state.topic}*.\n\n📍 Te esperamos.`;
+            delete this.appointmentState[to];
+          } else {
+            // No existe el estudiante, pide los demás datos
+            state.step = "name";
+            responseMessage = "🧑 Ingresa tu *nombre completo*.";
+          }
+          break;
+        }
+
+        case "name": {
+          state.name = message.trim();
+          state.step = "email";
+          responseMessage = "📧 Ingresa tu correo institucional.";
+          break;
+        }
+
+        case "email": {
+          state.email = message.trim().toLowerCase();
           state.step = "cedula";
           responseMessage = "🆔 Ingresa tu número de cédula.";
           break;
@@ -340,45 +465,33 @@ class MessageHandler {
 
         case "cedula": {
           state.cedula = message.trim();
-          state.step = "name";
-          responseMessage = "🧑 Por último, ingresa tu nombre completo.";
-          break;
-        }
 
-        case "name": {
-          state.name = message.trim();
-
-          let student = await userService.findByEmail(state.email);
-          if (!student) {
-            student = await userService.registerUser(
-              state.name,
-              state.email,
-              state.cedula,
-              "student",
-              state.career,
-              state.studentCode
-            );
-          }
+          // Ahora SÍ registramos al usuario
+          let student = await userService.registerUser(
+            state.name,
+            state.email,
+            state.cedula,
+            "student",
+            state.career,
+            state.studentCode
+          );
 
           const advisory = await advisoryService.findOneByAdvisorAndDay(
             state.advisor.advisorCode,
             state.selectedDay,
             state.selectedHour
           );
-
           if (!advisory) {
             responseMessage =
               "⚠️ No se encontró una asesoría activa ese día. Intenta otro.";
             break;
           }
-
           await scheduleService.createSchedule(
             student._id,
             state.topic,
             advisory._id
           );
-
-          responseMessage = `✅ ¡Listo ${state.name}!\nTu asesoría fue agendada con *${state.advisor.name}* el *${state.selectedDay}* sobre *${state.topic}*.\n\n📍 Te esperamos.`;
+          responseMessage = `✅ ¡Listo ${state.name}!\nTu asesoría fue agendada con *${state.advisor.name}* el *${state.selectedDay}* a las *${state.selectedHour}* sobre *${state.topic}*.\n\n📍 Te esperamos.`;
           delete this.appointmentState[to];
           break;
         }
@@ -389,7 +502,9 @@ class MessageHandler {
       }
 
       this.appointmentState[to] = state;
-      await whatsappService.sendMessage(to, responseMessage);
+      if (responseMessage) {
+        await whatsappService.sendMessage(to, responseMessage);
+      }
     } catch (error) {
       console.error("Error en handleAppointmentFlow:", error);
       await whatsappService.sendMessage(
@@ -397,6 +512,218 @@ class MessageHandler {
         "❌ Ocurrió un error. Intenta nuevamente."
       );
       delete this.appointmentState[to];
+    }
+  }
+  async handleRescheduleFlow(to, message) {
+  const state = this.rescheduleState[to] || { step: "askCode" };
+  let responseMessage = "";
+
+  try {
+    switch (state.step) {
+      // 1. Pedir código de estudiante
+      case "askCode":
+        responseMessage =
+          "🔄 Para reagendar, por favor escribe tu *código de estudiante*:";
+        state.step = "showSchedules";
+        break;
+
+      // 2. Mostrar asesorías próximas
+      case "showSchedules": {
+        const code = message.trim();
+        state.studentCode = code;
+
+        // Busca asesorías próximas y no canceladas
+        const schedules = await scheduleService.getUpcomingByStudentCode(code);
+
+        if (!schedules.length) {
+          responseMessage = "😕 No tienes asesorías próximas para reagendar.";
+          delete this.rescheduleState[to];
+          break;
+        }
+        state.schedules = schedules;
+
+        responseMessage =
+          "📆 Tus asesorías próximas:\n\n" +
+          schedules
+            .map((s, i) => {
+              // Validación para evitar errores si falta el populate
+              const advisorName =
+                s.AdvisoryId && s.AdvisoryId.advisorId
+                  ? s.AdvisoryId.advisorId.name
+                  : "No disponible";
+              return `${i + 1}. Día: *${s.dateStart
+                .toLocaleString()
+                .slice(0, 16)}* - Asesor: *${advisorName}* - Tema: ${s.topic}`;
+            })
+            .join("\n") +
+          "\n\n✍️ Escribe el número de la asesoría que quieres reagendar.";
+        state.step = "pickSchedule";
+        break;
+      }
+
+      // 3. Seleccionar cuál reagendar
+      case "pickSchedule": {
+        const idx = parseInt(message.trim(), 10) - 1;
+        if (
+          isNaN(idx) ||
+          !state.schedules ||
+          idx < 0 ||
+          idx >= state.schedules.length
+        ) {
+          responseMessage = "❌ Número no válido. Intenta de nuevo.";
+          break;
+        }
+        state.selectedSchedule = state.schedules[idx];
+        state.step = "confirmReschedule";
+        // Validación para nombre del asesor
+        const selected = state.selectedSchedule;
+        const advisorName =
+          selected.AdvisoryId && selected.AdvisoryId.advisorId
+            ? selected.AdvisoryId.advisorId.name
+            : "No disponible";
+        responseMessage =
+          `¿Quieres reagendar esta asesoría?\n` +
+          `Día: *${selected.dateStart
+            .toLocaleString()
+            .slice(0, 16)}* - Asesor: *${advisorName}* - Tema: ${
+            selected.topic
+          }\n\n` +
+          "Responde 'sí' para continuar o 'no' para cancelar.";
+        break;
+      }
+
+      // 4. Confirmar reagendamiento y disparar nuevo flujo de agendamiento
+      case "confirmReschedule": {
+        const respuesta = message.trim().toLowerCase();
+        if (respuesta === "sí" || respuesta === "si") {
+          // Cancela la actual
+          await scheduleService.cancelSchedule(state.selectedSchedule._id);
+          responseMessage =
+            "✅ Asesoría cancelada. Vamos a agendar una nueva asesoría...";
+          // Llama al flujo de agendamiento normal
+          this.appointmentState[to] = { step: "showAdvisors" };
+          delete this.rescheduleState[to];
+          await whatsappService.sendMessage(to, responseMessage);
+          await this.handleAppointmentFlow(to, null);
+          return; // ¡Ojo! No sigas aquí, ya enviaste respuesta y saltaste de flujo
+        } else {
+          responseMessage =
+            "❌ Operación cancelada. No se reagendó ninguna asesoría.";
+          delete this.rescheduleState[to];
+        }
+        break;
+      }
+
+      // 5. Default por si algo se sale del flujo esperado
+      default:
+        responseMessage = "Algo salió mal. Intenta desde el menú.";
+        delete this.rescheduleState[to];
+    }
+
+    this.rescheduleState[to] = state;
+    await whatsappService.sendMessage(to, responseMessage);
+  } catch (err) {
+    console.error("Error en handleRescheduleFlow:", err);
+    await whatsappService.sendMessage(
+      to,
+      "❌ Ocurrió un error. Intenta nuevamente."
+    );
+    delete this.rescheduleState[to];
+  }
+}
+  async handleCancelFlow(to, message) {
+    const state = this.cancelState[to] || { step: "askCode" };
+    let responseMessage = "";
+
+    try {
+      switch (state.step) {
+        case "askCode":
+          responseMessage =
+            "🗑️ Para cancelar, por favor escribe tu *código de estudiante*:";
+          state.step = "showSchedules";
+          break;
+
+        case "showSchedules": {
+          const code = message.trim();
+          state.studentCode = code;
+          const schedules = await scheduleService.getUpcomingByStudentCode(
+            code
+          );
+          if (!schedules.length) {
+            responseMessage = "😕 No tienes asesorías próximas para cancelar.";
+            delete this.cancelState[to];
+            break;
+          }
+          state.schedules = schedules;
+
+          responseMessage =
+            "📆 Tus asesorías próximas:\n\n" +
+            schedules
+              .map(
+                (s, i) =>
+                  `${i + 1}. Día: *${s.dateStart
+                    .toLocaleString()
+                    .slice(0, 16)}* - Asesor: *${
+                    s.AdvisoryId?.advisorId?.name || "Desconocido"
+                  }* - Tema: ${s.topic}`
+              )
+              .join("\n") +
+            "\n\n✍️ Escribe el número de la asesoría que quieres cancelar.";
+          state.step = "pickSchedule";
+          break;
+        }
+
+        case "pickSchedule": {
+          const idx = parseInt(message.trim(), 10) - 1;
+          if (
+            isNaN(idx) ||
+            !state.schedules ||
+            idx < 0 ||
+            idx >= state.schedules.length
+          ) {
+            responseMessage = "❌ Número no válido. Intenta de nuevo.";
+            break;
+          }
+          state.selectedSchedule = state.schedules[idx];
+          state.step = "confirmCancel";
+          responseMessage =
+            `¿Quieres cancelar esta asesoría?\n` +
+            `Día: *${state.selectedSchedule.dateStart
+              .toLocaleString()
+              .slice(0, 16)}* - Asesor: *${
+              state.selectedSchedule.AdvisoryId.advisorId.name
+            }* - Tema: ${state.selectedSchedule.topic}\n\n` +
+            "Responde 'sí' para confirmar o 'no' para abortar.";
+          break;
+        }
+
+        case "confirmCancel": {
+          const respuesta = message.trim().toLowerCase();
+          if (respuesta === "sí" || respuesta === "si") {
+            await scheduleService.cancelSchedule(state.selectedSchedule._id);
+            responseMessage = "✅ Asesoría cancelada correctamente.";
+          } else {
+            responseMessage =
+              "❌ Operación cancelada. No se modificó ninguna asesoría.";
+          }
+          delete this.cancelState[to];
+          break;
+        }
+
+        default:
+          responseMessage = "Algo salió mal. Intenta desde el menú.";
+          delete this.cancelState[to];
+      }
+
+      this.cancelState[to] = state;
+      await whatsappService.sendMessage(to, responseMessage);
+    } catch (err) {
+      console.error("Error en handleCancelFlow:", err);
+      await whatsappService.sendMessage(
+        to,
+        "❌ Ocurrió un error. Intenta nuevamente."
+      );
+      delete this.cancelState[to];
     }
   }
 
