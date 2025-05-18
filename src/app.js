@@ -14,6 +14,7 @@ const whatsappRoutes = require("./routes/whatsappRoutes.js");
 const topicRouter = require("./routes/topicRoutes.js");
 const uploadRoutes = require("./routes/uploadRoutes.js");
 const userInfoRouter = require("./routes/userInfoRoutes.js");
+const userQueryRouter = require("./routes/userQuery.js");
 
 // Swagger
 const swaggerUi = require('swagger-ui-express');
@@ -49,6 +50,7 @@ app.use('/user', userRouter);
 app.use('/topics', topicRouter);
 app.use('/upload', uploadRoutes);
 app.use('/userInfo',userInfoRouter);
+app.use('/userqueries', userQueryRouter);
 // Swagger
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
