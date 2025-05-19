@@ -9,7 +9,7 @@ const { feedbackSurveyTemplate } = require("../emails/feedbackSurveyTemplate");
 const JwtService = require("./jwt");
 const jwtService = new JwtService();
 const jwt = require("jsonwebtoken");
-const { JWT_SECRET } = require("../config/config");
+const { SECRET_KEY } = require("../config/config");
 exports.createSchedule = async (studentId, topic, advisoryId) => {
   try {
     const advisory = await Advisory.findById(advisoryId);
@@ -180,36 +180,33 @@ exports.updateAttendance = async (scheduleId, attendanceStatus) => {
   return schedule;
 };
 
-exports.validateFeedbackToken = async (req, res) => {
+// services/scheduleService.js
+exports.validateFeedbackToken = async (token) => {
   try {
-    const { token } = req.params;
-    console.log("Token recibido:", token);
-
-    const payload = jwt.verify(token, JWT_SECRET); // <-- Aquí puede explotar si está expirado o corrupto
-    console.log("Payload JWT:", payload);
-
+    const payload = jwt.verify(token, SECRET_KEY);
     const schedule = await Schedule.findById(payload.scheduleId)
       .populate([
         { path: "studentId", select: "name" },
         { path: "AdvisoryId", populate: { path: "advisorId", select: "name" } },
       ]);
 
-    if (!schedule) return res.status(404).json({ error: "No existe asesoría" });
-    console.log("Schedule:", schedule);
-
-    return res.send({
+      
+    if (!schedule) return null; // <-- ya NO usa res, solo retorna null
+    // Retorna el objeto con los datos
+    return {
       scheduleId: schedule._id,
       studentName: schedule.studentId.name,
       advisorName: schedule.AdvisoryId.advisorId.name,
       date: schedule.dateStart,
       topic: schedule.topic,
       rated: !!schedule.rating,
-    });
+    };
   } catch (e) {
-    console.error("Error en validateFeedbackToken:", e);
-    return handlerError(res, 500, "El enlace ha expirado, es inválido o ya calificaste.");
+    // Puedes lanzar un error para que el controller lo maneje
+    throw new Error("El enlace ha expirado, es inválido o ya calificaste.");
   }
 };
+
 exports.updateFeedback = async (scheduleId, feedback, rating) => {
   // Actualiza feedback y rating del schedule
   const schedule = await Schedule.findByIdAndUpdate(

@@ -139,7 +139,6 @@ exports.deleteAdvisory = async (req, res) => {
 exports.getAdvisoriesByAdvisor = async (req, res) => {
   try {
     const { advisorId } = req.params;
-    console.log(advisorId);
     if (!advisorId) {
       return handlerError(res, 400, errorsConstants.inputIdRequired);
     }

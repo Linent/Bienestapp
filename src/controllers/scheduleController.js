@@ -123,12 +123,17 @@ exports.deleteSchedule = async (req, res) => {
 
 exports.updateAttendance = async (req, res) => {
   try {
+    const usersValid = ["academic_friend", "admin"];
+
+    if (!usersValid.includes(req.user.role)){
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
     const { scheduleId, attendanceStatus } = req.body;
 
     const schedule = await ScheduleService.updateAttendance(scheduleId, attendanceStatus);
     return res.status(200).send(schedule);
   } catch (error) {
-    return handlerError(res, 400, error.message);
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
@@ -164,21 +169,22 @@ exports.submitFeedback = async (req, res) => {
     res.status(200).send(updated);
   } catch (error) {
     console.error("Error al enviar feedback:", error);
-    return handlerError(res, 500, error.message || errorsConstants.serverError);
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 exports.validateFeedbackToken = async (req, res) => {
   try {
     const { token } = req.params;
+    
     const data = await ScheduleService.validateFeedbackToken(token);
 
     if (!data) {
       return res.status(400).send({ error: "Token inválido, expirado o asesoría no encontrada" });
     }
 
-    return res.json(data);
+    return res.send(data); // <-- Aquí responde normalmente
   } catch (error) {
-    return handlerError(res, 500, error.message || errorsConstants.serverError);
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
