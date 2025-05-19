@@ -25,8 +25,11 @@ exports.registerUser = async (name, email, password, role, career, codigo) => {
       codigo,
     });
     const createUser = await newUser.save();
-    const userId = String(createUser._id);
-    await exports.sendWelcomeEmail(userId);
+    if(newUser.role !=='studendt'){
+
+      const userId = String(createUser._id);
+      await exports.sendWelcomeEmail(userId);
+    }
 
     return createUser;
   } catch (error) {

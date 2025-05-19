@@ -12,7 +12,7 @@ class JwtService {
   return jwt.sign(
     { scheduleId }, // payload
     this.secretKey,     // tu secret (asegúrate de tenerlo en .env/config)
-    { expiresIn: "1h" } // Expira en 1 hora
+    { expiresIn: "3h" } // Expira en 1 hora
   );
 }
   // Generar token
