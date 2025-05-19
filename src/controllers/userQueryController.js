@@ -129,11 +129,13 @@ exports.getKpiStats = async (req, res) => {
     // Total de consultas
     const totalQueries = await UserQuery.countDocuments();
 
-    // Últimos 7 días
+    // Últimos 7 días (incluido hoy)
     const fromDate = new Date();
-    fromDate.setDate(fromDate.getDate() - 7);
+    fromDate.setHours(0, 0, 0, 0); // Inicio del día
+    fromDate.setDate(fromDate.getDate() - 6); // Se cuentan hoy y los 6 días previos
 
-    const last7days = await UserQuery.aggregate([
+    // 1. Aggregate igual que antes
+    const aggResults = await UserQuery.aggregate([
       { $match: { createdAt: { $gte: fromDate } } },
       {
         $group: {
@@ -143,6 +145,25 @@ exports.getKpiStats = async (req, res) => {
       },
       { $sort: { "_id": 1 } }
     ]);
+
+    // 2. Generar array de los 7 días (incluido hoy)
+    const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(fromDate);
+      d.setDate(fromDate.getDate() + i);
+      days.push(d.toISOString().slice(0, 10)); // "YYYY-MM-DD"
+    }
+
+    // 3. Armar el array asegurando que todos los días estén presentes
+    const last7days = days.map(dateStr => {
+      const found = aggResults.find(r => r._id === dateStr);
+      return {
+        _id: dateStr,
+        count: found ? found.count : 0
+      };
+    });
 
     // Top topics usando topicId y trayendo el name
     const topTopics = await UserQuery.aggregate([
@@ -157,8 +178,8 @@ exports.getKpiStats = async (req, res) => {
       { $limit: 5 },
       {
         $lookup: {
-          from: "topics",        // <-- nombre de la colección (normalmente plural y minúscula)
-          localField: "_id",     // _id es topicId aquí
+          from: "topics",
+          localField: "_id",
           foreignField: "_id",
           as: "topic"
         }
@@ -168,7 +189,7 @@ exports.getKpiStats = async (req, res) => {
         $project: {
           _id: 0,
           topicId: "$_id",
-          topicName: "$topic.name", // <-- aquí tienes el name del tema
+          topicName: "$topic.name",
           count: 1
         }
       }
@@ -188,3 +209,4 @@ exports.getKpiStats = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
+
