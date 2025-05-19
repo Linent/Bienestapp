@@ -2,6 +2,7 @@ const { errorsConstants } = require("../constants/errors.constant");
 const { handlerError } = require("../handlers/errors.handlers");
 const ScheduleService = require("../services/scheduleService");
 
+
 exports.createSchedule = async (req, res) => {
   try {
  
@@ -129,7 +130,7 @@ exports.updateAttendance = async (req, res) => {
   } catch (error) {
     return handlerError(res, 400, error.message);
   }
-}; 
+};
 
 exports.getSchedulesByStudent = async (req, res) => {
   try {
@@ -153,20 +154,33 @@ exports.getSchedulesByStudent = async (req, res) => {
 exports.submitFeedback = async (req, res) => {
   try {
     const { scheduleId } = req.params;
-    const { description, rating } = req.body;
+    const { feedback, rating } = req.body;
 
-    if (!description || !rating) {
+    if (!feedback || !rating) {
       return handlerError(res, 400, errorsConstants.inputRequired);
     }
 
-    const updated = await ScheduleService.updateFeedback(scheduleId, description, rating);
+    const updated = await ScheduleService.updateFeedback(scheduleId, feedback, rating);
     res.status(200).send(updated);
   } catch (error) {
     console.error("Error al enviar feedback:", error);
     return handlerError(res, 500, error.message || errorsConstants.serverError);
   }
 };
+exports.validateFeedbackToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const data = await ScheduleService.validateFeedbackToken(token);
 
+    if (!data) {
+      return res.status(400).send({ error: "Token inválido, expirado o asesoría no encontrada" });
+    }
+
+    return res.json(data);
+  } catch (error) {
+    return handlerError(res, 500, error.message || errorsConstants.serverError);
+  }
+};
 
 exports.getStudentsScheduledToday = async (req, res) => {
   try {

@@ -8,7 +8,13 @@ class JwtService {
   constructor() {
     this.secretKey = process.env.SECRET_KEY || "clave_secreta";
   }
-
+  generateFeedbackToken(scheduleId) {
+  return jwt.sign(
+    { scheduleId }, // payload
+    this.secretKey,     // tu secret (asegúrate de tenerlo en .env/config)
+    { expiresIn: "1h" } // Expira en 1 hora
+  );
+}
   // Generar token
   generateToken(payload, expiresIn = "3h") {
     return jwt.sign(payload, this.secretKey, { expiresIn });

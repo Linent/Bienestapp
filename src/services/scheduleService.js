@@ -1,9 +1,15 @@
 const Schedule = require("../models/Schedule");
 const Advisory = require("../models/Advisory");
 const User = require("../models/User");
+const EmailService = require("./emailService");
 const { getNextMatchingDate } = require("../helpers/dateHelper");
 const { DateTime } = require("luxon");
 const { startOfYear, subYears } = require("date-fns");
+const { feedbackSurveyTemplate } = require("../emails/feedbackSurveyTemplate");
+const JwtService = require("./jwt");
+const jwtService = new JwtService();
+const jwt = require("jsonwebtoken");
+const { JWT_SECRET } = require("../config/config");
 exports.createSchedule = async (studentId, topic, advisoryId) => {
   try {
     const advisory = await Advisory.findById(advisoryId);
@@ -37,6 +43,24 @@ exports.createSchedule = async (studentId, topic, advisoryId) => {
     });
 
     await newSchedule.save();
+
+    const populatedSchedule = await Schedule.findById(newSchedule._id)
+      .populate({
+        path: "AdvisoryId",
+        populate: { path: "advisorId", select: "name email" }
+      })
+      .populate({ path: "studentId", select: "name email" });
+
+    const student = populatedSchedule.studentId;
+    const advisor = populatedSchedule.AdvisoryId?.advisorId;
+
+    // IMPORTANTE: Validar que advisor existe
+    await EmailService.sendAppointmentConfirmation(
+      student,
+      advisor,
+      populatedSchedule,
+      topic
+    );
     return newSchedule;
   } catch (error) {
     throw new Error("Error al agendar: " + error.message);
@@ -133,31 +157,69 @@ exports.deleteSchedule = async (scheduleId) => {
 
 exports.updateAttendance = async (scheduleId, attendanceStatus) => {
   const schedule = await Schedule.findByIdAndUpdate(
-    scheduleId,
-    { attendance: attendanceStatus },
-    { new: true }
-  );
+  scheduleId,
+  { attendance: attendanceStatus },
+  { new: true }
+).populate([
+  { path: "studentId", select: "name email" },
+  { 
+    path: "AdvisoryId", 
+    populate: { path: "advisorId", select: "name" } 
+  }
+]);
 
   if (!schedule) throw new Error("No se encontró el schedule");
+
+  // 2. Solo si la asistencia es true, manda el correo
+  if (attendanceStatus === true) {
+    // Genera el token (válido 1 hora)
+    const token = jwtService.generateFeedbackToken(schedule._id);
+    await EmailService.sendFeedbackSurvey(schedule, token);
+  }
 
   return schedule;
 };
 
-exports.updateFeedback = async (scheduleId, description, rating) => {
-  const schedule = await Schedule.findById(scheduleId);
-  if (!schedule) {
-    throw new Error("Asesoría no encontrada.");
-  }
+exports.validateFeedbackToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+    console.log("Token recibido:", token);
 
-  if (schedule.status !== "completed") {
-    throw new Error("Solo puedes calificar asesorías completadas.");
-  }
+    const payload = jwt.verify(token, JWT_SECRET); // <-- Aquí puede explotar si está expirado o corrupto
+    console.log("Payload JWT:", payload);
 
-  schedule.description = description;
-  schedule.rating = rating;
-  return await schedule.save();
+    const schedule = await Schedule.findById(payload.scheduleId)
+      .populate([
+        { path: "studentId", select: "name" },
+        { path: "AdvisoryId", populate: { path: "advisorId", select: "name" } },
+      ]);
+
+    if (!schedule) return res.status(404).json({ error: "No existe asesoría" });
+    console.log("Schedule:", schedule);
+
+    return res.send({
+      scheduleId: schedule._id,
+      studentName: schedule.studentId.name,
+      advisorName: schedule.AdvisoryId.advisorId.name,
+      date: schedule.dateStart,
+      topic: schedule.topic,
+      rated: !!schedule.rating,
+    });
+  } catch (e) {
+    console.error("Error en validateFeedbackToken:", e);
+    return handlerError(res, 500, "El enlace ha expirado, es inválido o ya calificaste.");
+  }
 };
-
+exports.updateFeedback = async (scheduleId, feedback, rating) => {
+  // Actualiza feedback y rating del schedule
+  const schedule = await Schedule.findByIdAndUpdate(
+    scheduleId,
+    { feedback, rating },
+    { new: true }
+  );
+  if (!schedule) throw new Error("No se encontró el schedule");
+  return schedule;
+};
 exports.getSchedulesByStudent = async (studentId) => {
   return await Schedule.find({ studentId }) // Filtra las asesorías del estudiante
     .populate({ path: "studentId", select: "name email" })
@@ -252,12 +314,13 @@ exports.getAttendedSchedulesByAdvisor = async () => {
 exports.getAttendedSchedulesByAdvisorAll = async (startDate, endDate) => {
   try {
     const matchDateFilter = {
-      ...(startDate && endDate && {
-        createdAt: {
-          $gte: new Date(startDate),
-          $lte: new Date(endDate)
-        }
-      })
+      ...(startDate &&
+        endDate && {
+          createdAt: {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate),
+          },
+        }),
     };
 
     const result = await User.aggregate([
@@ -267,8 +330,8 @@ exports.getAttendedSchedulesByAdvisorAll = async (startDate, endDate) => {
           from: "advisories",
           localField: "_id",
           foreignField: "advisorId",
-          as: "advisories"
-        }
+          as: "advisories",
+        },
       },
       { $unwind: { path: "$advisories", preserveNullAndEmptyArrays: true } },
       {
@@ -280,20 +343,20 @@ exports.getAttendedSchedulesByAdvisorAll = async (startDate, endDate) => {
               $match: {
                 $expr: { $eq: ["$AdvisoryId", "$$advisoryId"] },
                 ...matchDateFilter,
-                attendance: true
-              }
-            }
+                attendance: true,
+              },
+            },
           ],
-          as: "attendedSchedules"
-        }
+          as: "attendedSchedules",
+        },
       },
       {
         $group: {
           _id: "$_id",
           advisorName: { $first: "$name" },
           profileImage: { $first: "$profileImage" },
-          count: { $sum: { $size: "$attendedSchedules" } }
-        }
+          count: { $sum: { $size: "$attendedSchedules" } },
+        },
       },
       {
         $project: {
@@ -301,15 +364,17 @@ exports.getAttendedSchedulesByAdvisorAll = async (startDate, endDate) => {
           advisorName: 1,
           profileImage: 1,
           count: 1,
-          _id: 0
-        }
+          _id: 0,
+        },
       },
-      { $sort: { count: -1 } }
+      { $sort: { count: -1 } },
     ]);
 
     return result;
   } catch (error) {
-    throw new Error("Error al obtener asesorías atendidas por asesor: " + error.message);
+    throw new Error(
+      "Error al obtener asesorías atendidas por asesor: " + error.message
+    );
   }
 };
 // Obtener promedio de asistencia por asesoría
@@ -352,8 +417,8 @@ exports.getSchedulesByTopic = async () => {
       },
     },
     {
-      $sort: { count: -1 }
-    }
+      $sort: { count: -1 },
+    },
   ]);
   return byTopic;
 };
@@ -373,14 +438,15 @@ exports.getUpcomingByStudentCode = async (codigo) => {
   return Schedule.find({
     studentId: user._id,
     status: { $ne: "canceled" },
-    dateStart: { $gte: now }
+    dateStart: { $gte: now },
   })
     .populate({
-      path: "AdvisoryId", select:"advisorId",
+      path: "AdvisoryId",
+      select: "advisorId",
       populate: {
         path: "advisorId", // <-- esto depende de tu modelo Advisory
-        select: "name email"
-      }
+        select: "name email",
+      },
     })
     .sort({ dateStart: 1 });
 };
@@ -391,10 +457,32 @@ exports.getUpcomingByStudentCode = async (codigo) => {
  * @returns {Promise}
  */
 exports.cancelSchedule = async (scheduleId) => {
-  const schedule = await Schedule.findById(scheduleId);
+  // Cambia el estado a "canceled" y retorna el documento actualizado, populando lo necesario
+  const schedule = await Schedule.findByIdAndUpdate(
+    scheduleId,
+    { status: "canceled" },
+    { new: true }
+  )
+    .populate({
+      path: "studentId",
+      select: "name email",
+    })
+    .populate({
+      path: "AdvisoryId",
+      populate: {
+        path: "advisorId",
+        select: "name email",
+      },
+    });
+
   if (!schedule) throw new Error("No encontrada");
-  schedule.status = "canceled";
-  await schedule.save();
+
+  await EmailService.sendAppointmentCanceled(
+    schedule.studentId,
+    schedule.AdvisoryId.advisorId,
+    schedule
+  );
+
   return schedule;
 };
 // Obtener cantidad de asesorías por mes

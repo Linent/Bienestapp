@@ -741,10 +741,10 @@ paths:
             schema:
               type: object
               properties:
-                studentId:
+                scheduleId:
                   type: string
                   description: ID del registro de asistencia
-                  example: "67d4df03e1711993d1edd37b"
+                  example: "6829fb8a3ddf0844bbd580a9"
                 attendanceStatus:
                   type: Boolean
                   description: asistio o no asistio a la asesoría
