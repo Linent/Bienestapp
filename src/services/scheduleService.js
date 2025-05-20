@@ -88,7 +88,7 @@ exports.getSchedules = async () => {
 };
 
 exports.getStudentsByAdvisorAndDate = async (advisoryId, day, dateStart) => {
-  const advisorySchedules = await Schedule.find({ AdvisoryId: advisoryId })
+  const advisorySchedules = await Schedule.find({ AdvisoryId: advisoryId, status:"approved" })
     .populate({
       path: "AdvisoryId",
       select: "dateStart advisorId day",
@@ -158,7 +158,7 @@ exports.deleteSchedule = async (scheduleId) => {
 exports.updateAttendance = async (scheduleId, attendanceStatus) => {
   const schedule = await Schedule.findByIdAndUpdate(
   scheduleId,
-  { attendance: attendanceStatus },
+  { attendance: attendanceStatus, status:"completed" },
   { new: true }
 ).populate([
   { path: "studentId", select: "name email" },
