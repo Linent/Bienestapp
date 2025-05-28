@@ -155,7 +155,6 @@ const updateTopic = async (req, res) => {
       if (!Array.isArray(keywords)) {
         return handlerError(res, 400, "Las palabras clave deben ser un arreglo.");
       }
-
       updateData.keywords = keywords;
     }
 
@@ -171,23 +170,32 @@ const updateTopic = async (req, res) => {
 
       // Eliminar archivo anterior en Cloudinary si existe
       if (topic.publicId) {
+        // Detectar el tipo de recurso a eliminar
+        let oldExt = "pdf";
+        let resourceType = "image";
+        if (topic.filePath) {
+          oldExt = topic.filePath.split(".").pop().toLowerCase();
+          if (["jpg", "jpeg", "png"].includes(oldExt)) resourceType = "image";
+        }
         try {
-          await cloudinary.uploader.destroy(topic.publicId, {
-        resource_type: "auto", // Permite eliminar tanto imágenes como PDFs
+          const destroyResult = await cloudinary.uploader.destroy(topic.publicId, {
+            resource_type: resourceType,
           });
+          console.log("Resultado al eliminar en Cloudinary:", destroyResult);
         } catch (err) {
           console.warn("No se pudo eliminar el archivo anterior de Cloudinary:", err);
         }
       }
-      // Subir nuevo archivo
+
+      // Subir nuevo archivo (siempre en el folder "topics")
       const streamUpload = () =>
         new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
-        { folder: "topics", resource_type: "auto" }, // Permite subir imágenes y PDFs
-        (error, result) => {
-          if (result) resolve(result);
-          else reject(error);
-        }
+            { folder: "topics", resource_type: fileExt === "pdf" ? "image" : "image" },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
           );
           streamifier.createReadStream(file.data).pipe(stream);
         });
@@ -195,16 +203,17 @@ const updateTopic = async (req, res) => {
       const result = await streamUpload();
       updateData.filePath = result.secure_url;
       updateData.publicId = result.public_id;
-        }
+    }
 
-        const updatedTopic = await topicService.updateTopic(topicId, updateData);
+    const updatedTopic = await topicService.updateTopic(topicId, updateData);
 
-        return res.status(200).send(updatedTopic);
-      } catch (error) {
-        console.error("Error en updateTopic:", error);
-        return handlerError(res, 500, errorsConstants.serverError);
-      }
-    };
+    return res.status(200).send(updatedTopic);
+  } catch (error) {
+    console.error("Error en updateTopic:", error);
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
 
 const deleteTopic = async (req, res) => {
   if (!isAdmin(req.user.role)) {
