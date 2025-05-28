@@ -1,8 +1,14 @@
 // emails/feedbackSurveyTemplate.js
 const { FRONTEND_URL } = require("../config/config");
-let year = new Date().getFullYear();
 
-module.exports.feedbackSurveyTemplate = (schedule, token) => `
+module.exports.feedbackSurveyTemplate = (schedule, token) =>{ 
+  const fechaColombia = new Intl.DateTimeFormat("es-CO", {
+    dateStyle: "full",
+    timeStyle: "short",
+    timeZone: "America/Bogota"
+  }).format(new Date(schedule.dateStart));
+  let year = new Date().getFullYear();
+  return`
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -33,7 +39,7 @@ module.exports.feedbackSurveyTemplate = (schedule, token) => `
     <p>Hola <b>${schedule.studentId.name}</b>,</p>
     <p>Gracias por asistir a la asesoría con el asesor <b>${
       schedule.AdvisoryId.advisorId.name
-    }</b> el <b>${new Date(schedule.dateStart).toLocaleString("es-CO")}</b>.</p>
+    }</b> el <b>${fechaColombia}</b>.</p>
     <p>Por favor, ayúdanos a mejorar respondiendo esta breve encuesta:</p>
     <p>
       <p>
@@ -45,4 +51,4 @@ module.exports.feedbackSurveyTemplate = (schedule, token) => `
   </div>
 </body>
 </html>
-`;
+`};
