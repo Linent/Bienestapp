@@ -15,31 +15,85 @@ exports.createSchedule = async (studentId, topic, advisoryId) => {
     const advisory = await Advisory.findById(advisoryId);
     if (!advisory) throw new Error("No se encontró la asesoría.");
 
-    // Obtener fecha exacta de la asesoría (día y hora)
-    const advisoryDay = advisory.day; // Ej: "Monday"
+    const advisoryDay = advisory.day; // ej: "lunes"
     const advisoryHour = DateTime.fromJSDate(advisory.dateStart)
       .setZone("America/Bogota")
       .toFormat("HH:mm");
 
-    // Calcular la próxima fecha en que se repite esa asesoría
-    const nextDate = getNextMatchingDate(advisoryDay, advisoryHour);
+    // Calcular fecha y hora de HOY de la asesoría
+    const now = DateTime.now().setZone("America/Bogota");
+    const sessionStart = DateTime.fromJSDate(advisory.dateStart).setZone("America/Bogota").set({
+      year: now.year,
+      month: now.month,
+      day: now.day,
+    });
+    const sessionEnd = DateTime.fromJSDate(advisory.dateEnd).setZone("America/Bogota").set({
+      year: now.year,
+      month: now.month,
+      day: now.day,
+    });
+    const maxAgendaTime = sessionEnd.minus({ minutes: 40 });
 
-    // Contar cuántos estudiantes ya están agendados para esa fecha exacta
+    let nextDate;
+
+    // ¿Es hoy el mismo día de la asesoría?
+    const daysMap = {
+      lunes: 1,
+      martes: 2,
+      miércoles: 3,
+      jueves: 4,
+      viernes: 5,
+      sabado: 6,
+      domingo: 7,
+    };
+    const targetWeekday = daysMap[advisoryDay.toLowerCase()];
+    if (!targetWeekday) throw new Error("Día inválido en asesoría");
+
+    if (now.weekday === targetWeekday) {
+      if (now < sessionStart) {
+        // Antes de la asesoría: agenda para hoy
+        nextDate = sessionStart;
+      } else if (now >= sessionStart && now <= maxAgendaTime) {
+        // Dentro del rango permitido: agenda para hoy
+        nextDate = sessionStart;
+      } else {
+        // Ya no se puede agendar hoy: próxima semana
+        nextDate = sessionStart.plus({ days: 7 });
+      }
+    } else {
+      // No es el día: calcula el próximo día correcto
+      let temp = now.startOf('day');
+      while (temp.weekday !== targetWeekday || temp < now) {
+        temp = temp.plus({ days: 1 });
+      }
+      const [hour, minute] = advisoryHour.split(":").map(Number);
+      nextDate = temp.set({ hour, minute });
+    }
+
+    // VALIDACIÓN 1: No más de 10 estudiantes
     const count = await Schedule.countDocuments({
       AdvisoryId: advisoryId,
       dateStart: nextDate.toJSDate(),
     });
-
     if (count >= 10) {
       throw new Error("No hay cupos disponibles para esta asesoría.");
     }
 
-    // Crear nuevo agendamiento en esa misma hora
+    // VALIDACIÓN 2: No duplicados por estudiante
+    const alreadyScheduled = await Schedule.findOne({
+      AdvisoryId: advisoryId,
+      dateStart: nextDate.toJSDate(),
+      studentId: studentId,
+    });
+    if (alreadyScheduled) {
+      throw new Error("Ya estás agendado a esta asesoría en ese horario.");
+    }
+
     const newSchedule = new Schedule({
       studentId,
       topic,
       AdvisoryId: advisoryId,
-      dateStart: nextDate.toJSDate(), // siempre la misma hora
+      dateStart: nextDate.toJSDate(),
     });
 
     await newSchedule.save();
@@ -54,7 +108,6 @@ exports.createSchedule = async (studentId, topic, advisoryId) => {
     const student = populatedSchedule.studentId;
     const advisor = populatedSchedule.AdvisoryId?.advisorId;
 
-    // IMPORTANTE: Validar que advisor existe
     await EmailService.sendAppointmentConfirmation(
       student,
       advisor,
