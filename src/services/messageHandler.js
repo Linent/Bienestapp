@@ -4,14 +4,13 @@ const userService = require("./userService");
 const userInfoService = require("./userInfoService");
 const scheduleService = require("./scheduleService");
 const careerService = require("./CareerService");
-//const openAiService = require("./openAiService");
 const { loadPDFContent } = require("../utils/loadPdfContent");
 const askGemini = require("./geminiService");
-const Topic = require("../services/topicService");
-const config = require("../config/config");
+
 const { DOCUMENT_TYPES, BENEFICIARY_TYPES } = require("../constants/userEnums");
-const { mapNumberToKeyword } = require("../utils/mapNumberToKeyWord");
+
 const userQueryService = require("./userQueryService");
+const { getAllTopics } = require("./topicService")
 
 class MessageHandler {
   constructor() {
@@ -19,37 +18,95 @@ class MessageHandler {
     this.appointmentState = {};
     this.assistandState = {};
     this.userInfoState = {};
-    this.rescheduleState = {}; // Nuevo para reagendar
+    this.rescheduleState = {};
     this.cancelState = {};
   }
 
+  // ======= NUEVA FUNCIÓN: Limpia todos los estados excepto el actual ==========
+  clearOtherStates(currentState, to) {
+    const states = [
+      "menuState",
+      "appointmentState",
+      "assistandState",
+      "userInfoState",
+      "cancelState",
+      "rescheduleState",
+    ];
+    for (const state of states) {
+      if (state !== currentState && this[state][to]) {
+        delete this[state][to];
+      }
+    }
+  }
+  // ============================================================================
+
   async handleIncomingMessage(message, senderInfo) {
     try {
-      // --- MENSAJE DE TEXTO ---
       if (message?.type === "text") {
         const incomingMessage = message.text.body.toLowerCase().trim();
 
         // Saludo inicial
         if (this.isGreeting(incomingMessage)) {
+          this.clearOtherStates(null, message.from);
           await this.sendWelcome(message.from, message.id, senderInfo);
-          // Limpiar cualquier estado previo y mostrar menú principal
           this.menuState[message.from] = { step: "mainMenu" };
           await this.showMainMenu(message.from);
           return;
         }
+
+        // FLUJO CANCELAR ASESORÍA
+        if (
+          incomingMessage === "cancelar asesoría" ||
+          incomingMessage === "cancelar asesoria"
+        ) {
+          this.clearOtherStates("cancelState", message.from);
+          this.cancelState[message.from] = { step: "askCode" };
+          await this.handleCancelFlow(message.from, null);
+          return;
+        }
+
+        // FLUJO AGENDAR ASESORÍA
+        if (
+          incomingMessage === "agendar asesoría" ||
+          incomingMessage === "agendar asesoria"
+        ) {
+          this.clearOtherStates("appointmentState", message.from);
+          this.appointmentState[message.from] = { step: "showAdvisors" };
+          await this.handleAppointmentFlow(message.from, null);
+          return;
+        }
+
+        // FLUJO REAGENDAR ASESORÍA
+        if (
+          incomingMessage === "reagendar asesoría" ||
+          incomingMessage === "reagendar asesoria"
+        ) {
+          this.clearOtherStates("rescheduleState", message.from);
+          this.rescheduleState[message.from] = { step: "askCode" };
+          await this.handleRescheduleFlow(message.from, null);
+          return;
+        }
+
+        // FLUJO CONSULTAR SERVICIOS
+        if (incomingMessage === "consultar servicios") {
+          this.clearOtherStates("userInfoState", message.from);
+          this.userInfoState[message.from] = {
+            step: "documentType",
+            data: { phone: message.from },
+          };
+          await this.handleAssistandFlow(message.from, incomingMessage);
+          return;
+        }
+
+        // Si ya hay un flujo activo, lo seguimos
         if (this.rescheduleState && this.rescheduleState[message.from]) {
           await this.handleRescheduleFlow(message.from, incomingMessage);
           return;
         }
-        // ---> ¡Aquí! <---
-        // Si está en el flujo de cancelar asesoría
         if (this.cancelState && this.cancelState[message.from]) {
           await this.handleCancelFlow(message.from, incomingMessage);
           return;
         }
-        // ----
-
-        // ¿Hay un flujo activo?
         if (this.menuState[message.from]) {
           await this.handleMenuFlow(message.from, incomingMessage);
           return;
@@ -77,7 +134,6 @@ class MessageHandler {
       // --- MENSAJE INTERACTIVO (botón) ---
       if (message?.type === "interactive") {
         const selectedOption = message.interactive?.button_reply?.title?.trim();
-        // Detectar feedback del asistente
         if (
           ["sí, gracias", "hacer otra pregunta"].includes(
             selectedOption?.toLowerCase()
@@ -94,7 +150,7 @@ class MessageHandler {
     }
   }
 
-  // ✅ Saludo simple
+  // ... el resto de tus métodos (NO necesitan cambios) ...
   isGreeting(message) {
     const normalized = message
       .toLowerCase()
@@ -219,8 +275,8 @@ class MessageHandler {
           responseMessage =
             "Has seleccionado consultar servicios.\n\n📋 Antes de continuar, necesitamos algunos datos básicos.\n\n" +
             `🪪 ¿Cuál es tu *tipo de documento*?\n${DOCUMENT_TYPES.map(
-              (t) => `- ${t}`
-            ).join("\n")}`;
+              (t, i) => `${i + 1} - ${t}` // ¡Usa números aquí!
+            ).join("\n")}\n\n(Responde con el número o el nombre)`;
         }
         break;
 
@@ -262,11 +318,14 @@ class MessageHandler {
     // ---- MENÚ PRINCIPAL ----
     if (state.step === "mainMenu") {
       if (["amigos académicos", "amigos academicos", "1"].includes(opt)) {
+        // 💥 LIMPIA todos los estados menos el de menú antes de mostrar submenú
+        this.clearOtherStates("menuState", to);
         await this.showAmigosMenu(to);
         return;
       }
       if (["consultar servicios", "2"].includes(opt)) {
-        // Inicia el flujo de servicios (¡no cambies!)
+        // 💥 LIMPIA y abre flujo de consulta
+        this.clearOtherStates("userInfoState", to);
         delete this.menuState[to];
         await this.handleMenuOption(to, "consultar servicios");
         return;
@@ -279,17 +338,21 @@ class MessageHandler {
     // ---- MENÚ AMIGOS ----
     if (state.step === "amigosMenu") {
       if (["agendar asesoría", "agendar asesoria", "1"].includes(opt)) {
+        // 💥 LIMPIA antes de cambiar a flujo de agendar
+        this.clearOtherStates("appointmentState", to);
         delete this.menuState[to];
         await this.handleMenuOption(to, "agendar asesoría");
         return;
       }
       if (["reagendar asesoría", "reagendar asesoria", "2"].includes(opt)) {
+        this.clearOtherStates("rescheduleState", to);
         delete this.menuState[to];
         this.rescheduleState[to] = { step: "askCode" };
         await this.handleRescheduleFlow(to, null);
         return;
       }
       if (["cancelar asesoría", "cancelar asesoria", "3"].includes(opt)) {
+        this.clearOtherStates("cancelState", to);
         delete this.menuState[to];
         this.cancelState[to] = { step: "askCode" };
         await this.handleCancelFlow(to, null);
@@ -515,122 +578,126 @@ class MessageHandler {
     }
   }
   async handleRescheduleFlow(to, message) {
-  const state = this.rescheduleState[to] || { step: "askCode" };
-  let responseMessage = "";
+    const state = this.rescheduleState[to] || { step: "askCode" };
+    let responseMessage = "";
 
-  try {
-    switch (state.step) {
-      // 1. Pedir código de estudiante
-      case "askCode":
-        responseMessage =
-          "🔄 Para reagendar, por favor escribe tu *código de estudiante*:";
-        state.step = "showSchedules";
-        break;
+    try {
+      switch (state.step) {
+        // 1. Pedir código de estudiante
+        case "askCode":
+          responseMessage =
+            "🔄 Para reagendar, por favor escribe tu *código de estudiante*:";
+          state.step = "showSchedules";
+          break;
 
-      // 2. Mostrar asesorías próximas
-      case "showSchedules": {
-        const code = message.trim();
-        state.studentCode = code;
+        // 2. Mostrar asesorías próximas
+        case "showSchedules": {
+          const code = message.trim();
+          state.studentCode = code;
 
-        // Busca asesorías próximas y no canceladas
-        const schedules = await scheduleService.getUpcomingByStudentCode(code);
+          // Busca asesorías próximas y no canceladas
+          const schedules = await scheduleService.getUpcomingByStudentCode(
+            code
+          );
 
-        if (!schedules.length) {
-          responseMessage = "😕 No tienes asesorías próximas para reagendar.";
-          delete this.rescheduleState[to];
+          if (!schedules.length) {
+            responseMessage = "😕 No tienes asesorías próximas para reagendar.";
+            delete this.rescheduleState[to];
+            break;
+          }
+          state.schedules = schedules;
+
+          responseMessage =
+            "📆 Tus asesorías próximas:\n\n" +
+            schedules
+              .map((s, i) => {
+                // Validación para evitar errores si falta el populate
+                const advisorName =
+                  s.AdvisoryId && s.AdvisoryId.advisorId
+                    ? s.AdvisoryId.advisorId.name
+                    : "No disponible";
+                return `${i + 1}. Día: *${s.dateStart
+                  .toLocaleString()
+                  .slice(0, 16)}* - Asesor: *${advisorName}* - Tema: ${
+                  s.topic
+                }`;
+              })
+              .join("\n") +
+            "\n\n✍️ Escribe el número de la asesoría que quieres reagendar.";
+          state.step = "pickSchedule";
           break;
         }
-        state.schedules = schedules;
 
-        responseMessage =
-          "📆 Tus asesorías próximas:\n\n" +
-          schedules
-            .map((s, i) => {
-              // Validación para evitar errores si falta el populate
-              const advisorName =
-                s.AdvisoryId && s.AdvisoryId.advisorId
-                  ? s.AdvisoryId.advisorId.name
-                  : "No disponible";
-              return `${i + 1}. Día: *${s.dateStart
-                .toLocaleString()
-                .slice(0, 16)}* - Asesor: *${advisorName}* - Tema: ${s.topic}`;
-            })
-            .join("\n") +
-          "\n\n✍️ Escribe el número de la asesoría que quieres reagendar.";
-        state.step = "pickSchedule";
-        break;
-      }
-
-      // 3. Seleccionar cuál reagendar
-      case "pickSchedule": {
-        const idx = parseInt(message.trim(), 10) - 1;
-        if (
-          isNaN(idx) ||
-          !state.schedules ||
-          idx < 0 ||
-          idx >= state.schedules.length
-        ) {
-          responseMessage = "❌ Número no válido. Intenta de nuevo.";
+        // 3. Seleccionar cuál reagendar
+        case "pickSchedule": {
+          const idx = parseInt(message.trim(), 10) - 1;
+          if (
+            isNaN(idx) ||
+            !state.schedules ||
+            idx < 0 ||
+            idx >= state.schedules.length
+          ) {
+            responseMessage = "❌ Número no válido. Intenta de nuevo.";
+            break;
+          }
+          state.selectedSchedule = state.schedules[idx];
+          state.step = "confirmReschedule";
+          // Validación para nombre del asesor
+          const selected = state.selectedSchedule;
+          const advisorName =
+            selected.AdvisoryId && selected.AdvisoryId.advisorId
+              ? selected.AdvisoryId.advisorId.name
+              : "No disponible";
+          responseMessage =
+            `¿Quieres reagendar esta asesoría?\n` +
+            `Día: *${selected.dateStart
+              .toLocaleString()
+              .slice(0, 16)}* - Asesor: *${advisorName}* - Tema: ${
+              selected.topic
+            }\n\n` +
+            "Responde 'sí' para continuar o 'no' para cancelar.";
           break;
         }
-        state.selectedSchedule = state.schedules[idx];
-        state.step = "confirmReschedule";
-        // Validación para nombre del asesor
-        const selected = state.selectedSchedule;
-        const advisorName =
-          selected.AdvisoryId && selected.AdvisoryId.advisorId
-            ? selected.AdvisoryId.advisorId.name
-            : "No disponible";
-        responseMessage =
-          `¿Quieres reagendar esta asesoría?\n` +
-          `Día: *${selected.dateStart
-            .toLocaleString()
-            .slice(0, 16)}* - Asesor: *${advisorName}* - Tema: ${
-            selected.topic
-          }\n\n` +
-          "Responde 'sí' para continuar o 'no' para cancelar.";
-        break;
-      }
 
-      // 4. Confirmar reagendamiento y disparar nuevo flujo de agendamiento
-      case "confirmReschedule": {
-        const respuesta = message.trim().toLowerCase();
-        if (respuesta === "sí" || respuesta === "si") {
-          // Cancela la actual
-          await scheduleService.cancelSchedule(state.selectedSchedule._id);
-          responseMessage =
-            "✅ Asesoría cancelada. Vamos a agendar una nueva asesoría...";
-          // Llama al flujo de agendamiento normal
-          this.appointmentState[to] = { step: "showAdvisors" };
-          delete this.rescheduleState[to];
-          await whatsappService.sendMessage(to, responseMessage);
-          await this.handleAppointmentFlow(to, null);
-          return; // ¡Ojo! No sigas aquí, ya enviaste respuesta y saltaste de flujo
-        } else {
-          responseMessage =
-            "❌ Operación cancelada. No se reagendó ninguna asesoría.";
-          delete this.rescheduleState[to];
+        // 4. Confirmar reagendamiento y disparar nuevo flujo de agendamiento
+        case "confirmReschedule": {
+          const respuesta = message.trim().toLowerCase();
+          if (respuesta === "sí" || respuesta === "si") {
+            // Cancela la actual
+            await scheduleService.cancelSchedule(state.selectedSchedule._id);
+            responseMessage =
+              "✅ Asesoría cancelada. Vamos a agendar una nueva asesoría...";
+            // Llama al flujo de agendamiento normal
+            this.appointmentState[to] = { step: "showAdvisors" };
+            delete this.rescheduleState[to];
+            await whatsappService.sendMessage(to, responseMessage);
+            await this.handleAppointmentFlow(to, null);
+            return; // ¡Ojo! No sigas aquí, ya enviaste respuesta y saltaste de flujo
+          } else {
+            responseMessage =
+              "❌ Operación cancelada. No se reagendó ninguna asesoría.";
+            delete this.rescheduleState[to];
+          }
+          break;
         }
-        break;
+
+        // 5. Default por si algo se sale del flujo esperado
+        default:
+          responseMessage = "Algo salió mal. Intenta desde el menú.";
+          delete this.rescheduleState[to];
       }
 
-      // 5. Default por si algo se sale del flujo esperado
-      default:
-        responseMessage = "Algo salió mal. Intenta desde el menú.";
-        delete this.rescheduleState[to];
+      this.rescheduleState[to] = state;
+      await whatsappService.sendMessage(to, responseMessage);
+    } catch (err) {
+      console.error("Error en handleRescheduleFlow:", err);
+      await whatsappService.sendMessage(
+        to,
+        "❌ Ocurrió un error. Intenta nuevamente."
+      );
+      delete this.rescheduleState[to];
     }
-
-    this.rescheduleState[to] = state;
-    await whatsappService.sendMessage(to, responseMessage);
-  } catch (err) {
-    console.error("Error en handleRescheduleFlow:", err);
-    await whatsappService.sendMessage(
-      to,
-      "❌ Ocurrió un error. Intenta nuevamente."
-    );
-    delete this.rescheduleState[to];
   }
-}
   async handleCancelFlow(to, message) {
     const state = this.cancelState[to] || { step: "askCode" };
     let responseMessage = "";
@@ -750,226 +817,335 @@ class MessageHandler {
     await whatsappService.markAsRead(message.id);
   } */
   async handleAssistandFlow(to, message) {
-    const menuMessage = "¿La respuesta fue de tu ayuda?";
-    const buttons = [
-      { type: "reply", reply: { id: "option_4", title: "Sí, gracias" } },
-      {
-        type: "reply",
-        reply: { id: "option_5", title: "Hacer otra pregunta" },
-      },
-    ];
+  const menuMessage = "¿La respuesta fue de tu ayuda?";
+  const buttons = [
+    { type: "reply", reply: { id: "option_4", title: "Sí, gracias" } },
+    { type: "reply", reply: { id: "option_5", title: "Hacer otra pregunta" } },
+  ];
+  const normalize = (text) =>
+    text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
 
-    const normalize = (text) =>
-      text
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-
-    try {
-      // Paso 1: Si no hay estado previo, iniciar preguntando el tipo de documento
-      if (!this.userInfoState[to] && !this.assistandState[to]) {
-        this.userInfoState[to] = { step: "documentType", data: { phone: to } };
-        await whatsappService.sendMessage(
-          to,
-          `🪪 ¿Cuál es tu *tipo de documento*?\n${DOCUMENT_TYPES.map(
-            (t) => `- ${t}`
-          ).join("\n")}`
-        );
-        return;
-      }
-
-      // Paso 2: Flujo de Onboarding (registro si no existe)
-      const uState = this.userInfoState[to];
-      if (uState) {
-        switch (uState.step) {
-          // Tipo de documento
-          case "documentType": {
-            const input = normalize(message.trim());
-            const match = DOCUMENT_TYPES.find((t) =>
-              normalize(t).includes(input)
-            );
-            if (!match) {
-              await whatsappService.sendMessage(
-                to,
-                "❌ Tipo de documento no válido."
-              );
-              return;
-            }
-            uState.data.documentType = match;
-            uState.step = "documentNumber";
-            await whatsappService.sendMessage(
-              to,
-              "🔢 Ingresa tu *número de documento* (sin puntos ni espacios):"
-            );
-            return;
-          }
-
-          // Número de documento, buscar usuario en la BD
-          case "documentNumber": {
-            uState.data.documentNumber = message.trim();
-            const user = await userInfoService.getByDocumentNumber(
-              uState.data.documentNumber
-            );
-            if (user) {
-              // Si el usuario existe, salta directo a sugerir temas y preguntas
-              delete this.userInfoState[to];
-              this.assistandState[to] = { step: "question", userId: user._id };
-              await whatsappService.sendMessage(
-                to,
-                "✅ ¡Bienvenido de nuevo! ¿Sobre qué servicio deseas preguntar?\n" +
-                  "1. Servicio Médico\n2. Servicio Psicológico\n3. Servicio Odontológico\n" +
-                  "4. Amigos Académicos\n5. Psicosocial\n6. Asesoría Espiritual"
-              );
-              return;
-            }
-            // Si no existe, continuar el registro
-            uState.step = "fullName";
-            await whatsappService.sendMessage(
-              to,
-              "👤 Por favor, indícanos tu *nombre completo*."
-            );
-            return;
-          }
-
-          // Nombre completo
-          case "fullName":
-            uState.data.fullName = message.trim();
-            uState.step = "ufpsCode";
-            await whatsappService.sendMessage(
-              to,
-              "🎓 Ingresa tu *código UFPS* (o tu documento si no tienes código):"
-            );
-            return;
-
-          // Código UFPS
-          case "ufpsCode":
-            uState.data.ufpsCode = message.trim();
-            uState.step = "beneficiaryType";
-            await whatsappService.sendMessage(
-              to,
-              `👥 ¿Cuál es tu *tipo de beneficiario*?\n${BENEFICIARY_TYPES.map(
-                (t) => `- ${t}`
-              ).join("\n")}`
-            );
-            return;
-
-          // Tipo de beneficiario
-          case "beneficiaryType": {
-            const input = normalize(message.trim());
-            const match = BENEFICIARY_TYPES.find((t) =>
-              normalize(t).includes(input)
-            );
-            if (!match) {
-              await whatsappService.sendMessage(
-                to,
-                "❌ Tipo de beneficiario no válido."
-              );
-              return;
-            }
-            uState.data.beneficiaryType = match;
-            if (match !== "Externo(a) a la UFPS") {
-              uState.step = "academicProgram";
-              await whatsappService.sendMessage(
-                to,
-                "🏫 ¿Cuál es tu *programa académico* o *dependencia*?"
-              );
-              return;
-            }
-            uState.data.academicProgram = "Ninguno";
-            break;
-          }
-
-          // Programa académico
-          case "academicProgram":
-            uState.data.academicProgram = message.trim();
-            break;
-        }
-
-        // Registrar el usuario y pasar al flujo de preguntas
-        const createdUser = await userInfoService.registerUserInfo(uState.data);
-        delete this.userInfoState[to];
-        this.assistandState[to] = { step: "question", userId: createdUser._id };
-
-        await whatsappService.sendMessage(
-          to,
-          `✅ Gracias ${
-            uState.data.fullName.split(" ")[0]
-          }, tus datos han sido registrados.\n\n` +
-            "¿Sobre qué servicio deseas preguntar?\n" +
-            "1. Servicio Médico\n2. Servicio Psicológico\n3. Servicio Odontológico\n" +
-            "4. Amigos Académicos\n5. Psicosocial\n6. Asesoría Espiritual"
-        );
-        return;
-      }
-
-      // Paso 3: Flujo de consultas de preguntas (usuario ya existe)
-      if (this.assistandState[to]?.step === "question") {
-        const { userId } = this.assistandState[to];
-        const keyword = mapNumberToKeyword(message) || message;
-        const topic =
-          await require("../services/topicService").getTopicsByKeyword(keyword);
-
-        // Guardar consulta
-        await userQueryService.saveUserQuery({
-          userId,
-          rawQuery: message,
-          topicKey: keyword,
-          topicId: topic?._id ?? null,
-        });
-
-        // Generar respuesta
-        let responseMessage = "";
-        if (!topic) {
-          responseMessage =
-            "❌ No encontré información relacionada. Intenta reformular tu pregunta.";
-        } else {
-          const pdfText = await loadPDFContent(topic.filePath);
-          try {
-            responseMessage = await askGemini(message, pdfText);
-          } catch (e) {
-            console.error("Error con Gemini:", e);
-            responseMessage =
-              e.status === 429
-                ? "⚠️ Límite de consultas alcanzado. Intenta más tarde."
-                : "⚠️ Error al generar la respuesta. Intenta de nuevo.";
-          }
-        }
-
-        await whatsappService.sendMessage(to, responseMessage);
-        await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
-        return;
-      }
-    } catch (err) {
-      console.error("❌ Error en handleAssistandFlow:", err);
+  try {
+    // 1. Inicio: preguntar tipo de documento
+    if (!this.userInfoState[to] && !this.assistandState[to]) {
+      this.userInfoState[to] = { step: "documentType", data: { phone: to } };
+      const tipoDocMenu = DOCUMENT_TYPES.map(
+        (t, i) => `${i + 1} - ${t}`
+      ).join("\n");
       await whatsappService.sendMessage(
         to,
-        "⚠️ Ocurrió un error inesperado. Por favor intenta de nuevo."
+        `🪪 ¿Cuál es tu *tipo de documento*?\n${tipoDocMenu}\n\n(Responde con el número o el nombre)`
       );
+      return;
     }
-  }
-  async handleAssistandFeedback(to, selectedOption) {
-    switch (selectedOption.toLowerCase()) {
-      case "sí, gracias":
-        delete this.assistandState[to];
-        await whatsappService.sendMessage(
-          to,
-          "¡Nos alegra haber sido de ayuda! 😊 Si necesitas algo más, escríbenos."
-        );
-        break;
-      case "hacer otra pregunta":
-        // Solo setea el step, mantiene userId
-        if (this.assistandState[to]) {
-          this.assistandState[to].step = "question";
+
+    // 2. Registro de usuario (onboarding)
+    const uState = this.userInfoState[to];
+    if (uState) {
+      switch (uState.step) {
+        case "documentType": {
+          const input = normalize(message.trim());
+          let match = null;
+          if (/^\d+$/.test(input)) {
+            const idx = parseInt(input, 10) - 1;
+            if (DOCUMENT_TYPES[idx]) match = DOCUMENT_TYPES[idx];
+          }
+          if (!match) {
+            match = DOCUMENT_TYPES.find((t) => normalize(t).includes(input));
+          }
+          if (!match) {
+            const tipoDocMenu = DOCUMENT_TYPES.map(
+              (t, i) => `${i + 1} - ${t}`
+            ).join("\n");
+            await whatsappService.sendMessage(
+              to,
+              `❌ Tipo de documento no válido.\n\nEl número o el nombre como aparece en la lista:\n${tipoDocMenu}`
+            );
+            return;
+          }
+          uState.data.documentType = match;
+          uState.step = "documentNumber";
+          await whatsappService.sendMessage(
+            to,
+            "🔢 Ingresa tu *número de documento* (sin puntos ni espacios):"
+          );
+          return;
         }
+
+        case "documentNumber": {
+          uState.data.documentNumber = message.trim();
+          const user = await userInfoService.getByDocumentNumber(
+            uState.data.documentNumber
+          );
+          if (user) {
+            // Si el usuario existe, pasar a selección de servicio (topics dinámicos)
+            delete this.userInfoState[to];
+            this.assistandState[to] = { step: "selectService", userId: user._id };
+            // Obtener los topics de la BD
+            const topics = await getAllTopics();
+            if (!topics.length) {
+              await whatsappService.sendMessage(
+                to,
+                "No hay servicios/temas disponibles por el momento."
+              );
+              return;
+            }
+            // Guardar la lista para luego saber el index
+            this.assistandState[to].topicsList = topics;
+            const servicesMenu = topics.map(
+              (t, i) => `${i + 1} - ${t.name}`
+            ).join("\n");
+            await whatsappService.sendMessage(
+              to,
+              "✅ ¡Bienvenido de nuevo! ¿Sobre qué servicio deseas preguntar?\n" +
+                servicesMenu + "\n\n(Responde con el número o el nombre)"
+            );
+            return;
+          }
+          // Si no existe, continuar registro
+          uState.step = "fullName";
+          await whatsappService.sendMessage(
+            to,
+            "👤 Por favor, indícanos tu *nombre completo*."
+          );
+          return;
+        }
+
+        case "fullName":
+          uState.data.fullName = message.trim();
+          uState.step = "ufpsCode";
+          await whatsappService.sendMessage(
+            to,
+            "🎓 Ingresa tu *código UFPS* (o tu documento si no tienes código):"
+          );
+          return;
+
+        case "ufpsCode":
+          uState.data.ufpsCode = message.trim();
+          uState.step = "beneficiaryType";
+          const beneficiarioMenu = BENEFICIARY_TYPES.map(
+            (t, i) => `${i + 1} - ${t}`
+          ).join("\n");
+          await whatsappService.sendMessage(
+            to,
+            `👥 ¿Cuál es tu *tipo de beneficiario*?\n${beneficiarioMenu}\n\n(Responde con el número o el nombre)`
+          );
+          return;
+
+        case "beneficiaryType": {
+          const input = normalize(message.trim());
+          let match = null;
+          if (/^\d+$/.test(input)) {
+            const idx = parseInt(input, 10) - 1;
+            if (BENEFICIARY_TYPES[idx]) match = BENEFICIARY_TYPES[idx];
+          }
+          if (!match) {
+            match = BENEFICIARY_TYPES.find((t) =>
+              normalize(t).includes(input)
+            );
+          }
+          if (!match) {
+            const beneficiarioMenu = BENEFICIARY_TYPES.map(
+              (t, i) => `${i + 1} - ${t}`
+            ).join("\n");
+            await whatsappService.sendMessage(
+              to,
+              `❌ Tipo de beneficiario no válido.\n\nEl número o el nombre como aparece en la lista:\n${beneficiarioMenu}`
+            );
+            return;
+          }
+          uState.data.beneficiaryType = match;
+          if (match !== "Externo(a) a la UFPS") {
+            uState.step = "academicProgram";
+            await whatsappService.sendMessage(
+              to,
+              "🏫 ¿Cuál es tu *programa académico* o *dependencia*?"
+            );
+            return;
+          }
+          uState.data.academicProgram = "Ninguno";
+          break;
+        }
+
+        case "academicProgram":
+          uState.data.academicProgram = message.trim();
+          break;
+      }
+
+      // Registrar usuario y pasar a seleccionar servicio (topics dinámicos)
+      const createdUser = await userInfoService.registerUserInfo(uState.data);
+      delete this.userInfoState[to];
+      this.assistandState[to] = { step: "selectService", userId: createdUser._id };
+      const topics = await getAllTopics();
+      if (!topics.length) {
         await whatsappService.sendMessage(
           to,
-          "Perfecto. Puedes escribirme tu nueva pregunta sobre los servicios de bienestar universitario."
+          "No hay servicios/temas disponibles por el momento."
         );
-        break;
-      default:
-        await whatsappService.sendMessage(to, "No entendimos tu respuesta.");
+        return;
+      }
+      this.assistandState[to].topicsList = topics;
+      const servicesMenu = topics.map(
+        (t, i) => `${i + 1} - ${t.name}`
+      ).join("\n");
+      await whatsappService.sendMessage(
+        to,
+        `✅ Gracias ${uState.data.fullName.split(" ")[0]}, tus datos han sido registrados.\n\n` +
+          "¿Sobre qué servicio deseas preguntar?\n" +
+          servicesMenu +
+          "\n\n(Responde con el número o el nombre)"
+      );
+      return;
     }
+
+    // 3. Selección de servicio/tema (desde la BD)
+    if (this.assistandState[to]?.step === "selectService") {
+      const topics = this.assistandState[to].topicsList || [];
+      const input = normalize(message.trim());
+      let selectedTopic = null;
+
+      // Buscar por número
+      if (/^\d+$/.test(input)) {
+        const idx = parseInt(input, 10) - 1;
+        if (topics[idx]) selectedTopic = topics[idx];
+      }
+      // Buscar por nombre
+      if (!selectedTopic) {
+        selectedTopic = topics.find((t) =>
+          normalize(t.name).includes(input)
+        );
+      }
+      if (!selectedTopic) {
+        const servicesMenu = topics.map(
+          (t, i) => `${i + 1} - ${t.name}`
+        ).join("\n");
+        await whatsappService.sendMessage(
+          to,
+          `❌ Servicio no válido.\n\nEl número o el nombre como aparece en la lista:\n${servicesMenu}`
+        );
+        return;
+      }
+      // Guardar el topic y pasar a preguntar
+      this.assistandState[to].selectedTopic = selectedTopic;
+      this.assistandState[to].step = "writeQuestion";
+      await whatsappService.sendMessage(
+        to,
+        `✍️ Por favor escribe tu pregunta sobre *${selectedTopic.name}*:`
+      );
+      return;
+    }
+
+    // 4. Pregunta sobre el servicio/tema (se almacena)
+    if (this.assistandState[to]?.step === "writeQuestion") {
+      const { userId, selectedTopic } = this.assistandState[to];
+      const rawQuery = message.trim();
+
+      // Guardar la consulta con el topic y la pregunta del usuario
+      await userQueryService.saveUserQuery({
+        userId,
+        rawQuery,
+        topicKey: selectedTopic.name,
+        topicId: selectedTopic._id,
+      });
+
+      // Generar respuesta
+      let responseMessage = "";
+      if (!selectedTopic || !selectedTopic.filePath) {
+        responseMessage =
+          "❌ No encontré información relacionada. Intenta reformular tu pregunta.";
+      } else {
+        const pdfText = await loadPDFContent(selectedTopic.filePath);
+        try {
+          responseMessage = await askGemini(rawQuery, pdfText);
+        } catch (e) {
+          console.error("Error con Gemini:", e);
+          responseMessage =
+            e.status === 429
+              ? "⚠️ Límite de consultas alcanzado. Intenta más tarde."
+              : "⚠️ Error al generar la respuesta. Intenta de nuevo.";
+        }
+      }
+
+      // Termina el flujo de pregunta y muestra botones de feedback
+      delete this.assistandState[to].selectedTopic;
+      this.assistandState[to].step = "question"; // Si quieres que pueda volver a preguntar
+      await whatsappService.sendMessage(to, responseMessage);
+      await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+      return;
+    }
+
+    // 5. Si ya está en modo preguntar varias veces, volver a ofrecer menú de servicios dinámico
+    if (this.assistandState[to]?.step === "question") {
+      this.assistandState[to].step = "selectService";
+      const topics = await getAllTopics();
+      this.assistandState[to].topicsList = topics;
+      const servicesMenu = topics.map(
+        (t, i) => `${i + 1} - ${t.name}`
+      ).join("\n");
+      await whatsappService.sendMessage(
+        to,
+        "¿Sobre qué servicio deseas preguntar?\n" +
+          servicesMenu +
+          "\n\n(Responde con el número o el nombre)"
+      );
+      return;
+    }
+  } catch (err) {
+    console.error("❌ Error en handleAssistandFlow:", err);
+    await whatsappService.sendMessage(
+      to,
+      "⚠️ Ocurrió un error inesperado. Por favor intenta de nuevo."
+    );
   }
+}
+
+  async handleAssistandFeedback(to, selectedOption) {
+  const menuMessage = "¿La respuesta fue de tu ayuda?";
+  const buttons = [
+    { type: "reply", reply: { id: "option_4", title: "Sí, gracias" } },
+    { type: "reply", reply: { id: "option_5", title: "Hacer otra pregunta" } },
+  ];
+
+  switch (selectedOption.toLowerCase()) {
+    case "sí, gracias":
+      delete this.assistandState[to];
+      await whatsappService.sendMessage(
+        to,
+        "¡Nos alegra haber sido de ayuda! 😊 Si necesitas algo más, escríbenos."
+      );
+      break;
+
+    case "hacer otra pregunta": {
+      // Reinicia el flujo y muestra de nuevo los temas/servicios
+      this.assistandState[to] = { step: "selectService", userId: this.assistandState[to]?.userId };
+      const topics = await getAllTopics();
+      if (!topics.length) {
+        await whatsappService.sendMessage(
+          to,
+          "No hay servicios/temas disponibles por el momento."
+        );
+        return;
+      }
+      this.assistandState[to].topicsList = topics;
+      const servicesMenu = topics
+        .map((t, i) => `${i + 1} - ${t.name}`)
+        .join("\n");
+      await whatsappService.sendMessage(
+        to,
+        "¿Sobre qué servicio deseas preguntar?\n" +
+          servicesMenu +
+          "\n\n(Responde con el número o el nombre)"
+      );
+      break;
+    }
+
+    default:
+      await whatsappService.sendMessage(to, "No entendimos tu respuesta.");
+  }
+}
   normalize(text) {
     return text
       .toLowerCase()

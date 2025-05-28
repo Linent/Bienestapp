@@ -90,3 +90,23 @@ exports.enableCareer = async (req, res) => {
   }
 
 };
+
+exports.getCareerCode = async (req, res) => {
+  try {
+    const usersValid = ["admin"];
+    if (!usersValid.includes(req.user.role)){
+      return handlerError(res, 403, errorsConstants.unauthorized);
+    }
+    const { code } = req.params
+    if(!code){
+      return handlerError(res, 403, errorsConstants.inputRequired);
+    }
+    const foundCareer = await careerService.findByCode(code);
+    if(!foundCareer){
+      return handlerError(res, 403, errorsConstants.careerNotExist);
+    }
+    return res.status(200).send(foundCareer);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+}

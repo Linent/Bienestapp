@@ -8,5 +8,6 @@ router.get("/", Auth,careerController.getAllCareers);
 router.get("/:id", Auth, careerController.getCareerById);
 router.put("/:id", Auth, careerController.updateCareer);
 router.post("/enable/:id", Auth, careerController.enableCareer);
+router.get('/code/:code', Auth, careerController.getCareerCode);
 
 module.exports = router;

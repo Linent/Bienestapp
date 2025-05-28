@@ -14,8 +14,17 @@ const BENEFICIARY_TYPES = [
   "Personal Administrativo UFPS",
   "Externo(a) a la UFPS"
 ];
+const SERVICES_LIST = [
+  "Servicio Médico",
+  "Servicio Psicológico",
+  "Servicio Odontológico",
+  "Amigos Académicos",
+  "Psicosocial",
+  "Asesoría Espiritual"
+];
 
 module.exports = {
   DOCUMENT_TYPES,
   BENEFICIARY_TYPES,
+  SERVICES_LIST
 };

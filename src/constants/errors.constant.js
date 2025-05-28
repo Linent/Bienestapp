@@ -33,6 +33,7 @@ const errorsConstants = {
   unauthorized: 'errors.unauthorized',
   fileRequired: 'errors.file_required',
   fileNotFound: 'errors.file_not_found',
+  careerNotExist: 'error.Career_Not_Exist'
 };
 
 module.exports = {

@@ -129,14 +129,19 @@ exports.getKpiStats = async (req, res) => {
     // Total de consultas
     const totalQueries = await UserQuery.countDocuments();
 
-    // Últimos 7 días (incluido hoy)
-    const fromDate = new Date();
-    fromDate.setHours(0, 0, 0, 0); // Inicio del día
-    fromDate.setDate(fromDate.getDate() - 6); // Se cuentan hoy y los 6 días previos
+    // Usuarios únicos (general)
+    const uniqueUsers = await UserQuery.distinct("userId");
+    const totalUniqueUsers = uniqueUsers.length;
 
-    // 1. Aggregate igual que antes
+    // Fechas en UTC para últimos 7 días
+    const now = new Date();
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const fromDateUTC = new Date(todayUTC);
+    fromDateUTC.setUTCDate(todayUTC.getUTCDate() - 6);
+
+    // Aggregate por fecha UTC
     const aggResults = await UserQuery.aggregate([
-      { $match: { createdAt: { $gte: fromDate } } },
+      { $match: { createdAt: { $gte: fromDateUTC } } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
@@ -146,17 +151,15 @@ exports.getKpiStats = async (req, res) => {
       { $sort: { "_id": 1 } }
     ]);
 
-    // 2. Generar array de los 7 días (incluido hoy)
+    // Fechas de los últimos 7 días (UTC)
     const days = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     for (let i = 0; i < 7; i++) {
-      const d = new Date(fromDate);
-      d.setDate(fromDate.getDate() + i);
+      const d = new Date(fromDateUTC);
+      d.setUTCDate(fromDateUTC.getUTCDate() + i);
       days.push(d.toISOString().slice(0, 10)); // "YYYY-MM-DD"
     }
 
-    // 3. Armar el array asegurando que todos los días estén presentes
+    // Conteos por día
     const last7days = days.map(dateStr => {
       const found = aggResults.find(r => r._id === dateStr);
       return {
@@ -165,7 +168,10 @@ exports.getKpiStats = async (req, res) => {
       };
     });
 
-    // Top topics usando topicId y trayendo el name
+    // Consultas (hoy) -- el último día de last7days es HOY en UTC
+    const consultasHoy = last7days[last7days.length - 1].count;
+
+    // Top topics
     const topTopics = await UserQuery.aggregate([
       { $match: { topicId: { $ne: null } } },
       {
@@ -195,18 +201,16 @@ exports.getKpiStats = async (req, res) => {
       }
     ]);
 
-    // Usuarios únicos
-    const uniqueUsers = await UserQuery.distinct("userId");
-    const totalUniqueUsers = uniqueUsers.length;
-
     res.json({
       totalQueries,
-      last7days,
-      topTopics,           // [{ topicId, topicName, count }]
       totalUniqueUsers,
+      last7days,
+      consultasHoy,
+      topTopics
     });
   } catch (error) {
-    return handlerError(res, 500, errorsConstants.serverError);
+    console.error(error);
+    res.status(500).json({ error: "Error al obtener los KPIs" });
   }
 };
 
