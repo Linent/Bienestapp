@@ -23,6 +23,19 @@ exports.createSchedule = async (req, res) => {
     return handlerError(res, 500, errorsConstants.serverError);
   }
 };
+
+exports.countSchedulesByAdvisory = async (req, res) => {
+  try {
+    const { advisoryId, dateStart } = req.query;
+    if (!advisoryId) {
+      return res.status(400).json({ error: "advisoryId requerido" });
+    }
+    const count = await ScheduleService.countSchedulesByAdvisory(advisoryId, dateStart);
+    return res.json({ count });
+  } catch (err) {
+    return res.status(500).json({ error: "Error al contar agendas" });
+  }
+};
 exports.getStudentsByAdvisory = async (req, res) => {
   try {
     const { advisoryId, day, dateStart } = req.query;

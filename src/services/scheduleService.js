@@ -500,6 +500,19 @@ exports.getUpcomingByStudentCode = async (codigo) => {
     })
     .sort({ dateStart: 1 });
 };
+/**
+ * Cuenta los estudiantes agendados para una asesoría (y opcionalmente una fecha/hora específica)
+ * @param {string} advisoryId
+ * @param {string|Date} [dateStart] - (opcional) Fecha/hora exacta de la asesoría
+ * @returns {Promise<number>}
+ */
+exports.countSchedulesByAdvisory = async (advisoryId, dateStart) => {
+  const filter = { AdvisoryId: advisoryId, status: { $ne: "canceled" } };
+  if (dateStart) {
+    filter.dateStart = new Date(dateStart);
+  }
+  return Schedule.countDocuments(filter);
+};
 
 /**
  * Cancela una asesoría por su ID

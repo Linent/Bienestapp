@@ -19,6 +19,7 @@ router.get("/schedules-by-month", Auth, scheduleController.getSchedulesByMonth);
 router.get("/schedules-by-day", Auth, scheduleController.getSchedulesByDay);
 router.get("/schedules-by-year", Auth, scheduleController.getSchedulesByYear);
 router.put("/update-attendance", Auth, scheduleController.updateAttendance);
+router.get("/count-by-advisory", Auth, scheduleController.countSchedulesByAdvisory);
 router.put("/feedback/:scheduleId", scheduleController.submitFeedback);
 // routes/schedule.js o advisory.js
 
