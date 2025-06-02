@@ -11,6 +11,6 @@ router.get("/kpis", Auth, userQueryController.getKpiStats);
 router.get("/by-day",     Auth, userQueryController.byDay);
 router.get("/top-topics", Auth, userQueryController.topTopics);
 router.get("/by-beneficiary", Auth, userQueryController.byBeneficiary);
-router.get("/by-program",     Auth, userQueryController.byProgram);
+router.get("/by-program", Auth, userQueryController.byCareer);
 
 module.exports = router;

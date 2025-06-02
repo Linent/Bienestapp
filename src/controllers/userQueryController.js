@@ -2,6 +2,7 @@
 const UserQuery = require("../models/UserQuery");
 const UserInfo = require("../models/UserInfo");
 const Topic = require("../models/Topic");
+const careerService = require ("../services/CareerService");
 const { handlerError } = require("../handlers/errors.handlers");
 const { errorsConstants } = require("../constants/errors.constant");
 
@@ -98,30 +99,59 @@ catch(error){
   return handlerError(res, 500, errorsConstants.serverError);
 }
 };
-exports.byProgram = async (req, res) => {
-  try{const stats = await UserQuery.aggregate([
-    {
-      $lookup: {
-        from: "userinfos",
-        localField: "userId",
-        foreignField: "_id",
-        as: "user"
-      }
-    },
-    { $unwind: "$user" },
-    {
-      $group: {
-        _id: "$user.academicProgram",
-        total: { $sum: 1 }
-      }
-    },
-    { $sort: { total: -1 } }
-  ]);
-  res.status(200).send(stats.map(s => ({ academicProgram: s._id || "Sin programa", total: s.total })));
-}
-catch(error){
-  return handlerError(res, 500, errorsConstants.serverError);
-}
+exports.byCareer = async (req, res) => {
+  try {
+    // Paso 1: Agrupa por los 3 primeros dígitos del código UFPS
+    const stats = await UserQuery.aggregate([
+      {
+        $lookup: {
+          from: "userinfos",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      { $unwind: "$user" },
+      // Solo aquellos con ufpsCode de 7 dígitos
+      {
+        $match: {
+          "user.ufpsCode": { $regex: /^\d{7}$/ }
+        }
+      },
+      {
+        $addFields: {
+          careerCode: { $substr: ["$user.ufpsCode", 0, 3] }
+        }
+      },
+      {
+        $group: {
+          _id: "$careerCode",
+          total: { $sum: 1 }
+        }
+      },
+      { $sort: { total: -1 } }
+    ]);
+
+    // Paso 2: Trae los nombres de carreras (solo para los códigos encontrados)
+    // Puedes optimizar haciendo una sola consulta a Career.find({ code: { $in: codes } })
+    const codes = stats.map(s => s._id);
+    console.log(codes);
+    const careers = await careerService.findByCodes(codes);
+
+    // Paso 3: Une el nombre de la carrera con el código y el total
+    const results = stats.map(s => {
+      const career = careers.find(c => c.code === s._id);
+      return {
+        code: s._id,
+        careerName: career ? career.name : "Desconocida",
+        total: s.total
+      };
+    });
+
+    res.status(200).send(results);
+  } catch (error) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
 };
 // KPIs para dashboard/gráficas
 exports.getKpiStats = async (req, res) => {

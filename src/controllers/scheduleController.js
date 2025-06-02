@@ -24,6 +24,24 @@ exports.createSchedule = async (req, res) => {
   }
 };
 
+exports.getFeedbacksByMentor = async (req, res) => {
+  try {
+    const { mentorId } = req.params;
+    const result = await ScheduleService.getFeedbacksByMentor(mentorId);
+    res.status(200).send(result);
+  } catch (err) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
+
+exports.getAllFeedbacks = async (req, res) => {
+  try {
+    const schedules = await ScheduleService.getAllFeedbacks();
+    res.status(200).send(schedules);
+  } catch (err) {
+    return handlerError(res, 500, errorsConstants.serverError);
+  }
+};
 exports.countSchedulesByAdvisory = async (req, res) => {
   try {
     const { advisoryId, dateStart } = req.query;

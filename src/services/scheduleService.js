@@ -84,6 +84,7 @@ exports.createSchedule = async (studentId, topic, advisoryId) => {
       AdvisoryId: advisoryId,
       dateStart: nextDate.toJSDate(),
       studentId: studentId,
+      status: "approved",
     });
     if (alreadyScheduled) {
       throw new Error("Ya estás agendado a esta asesoría en ese horario.");
@@ -472,6 +473,50 @@ exports.getSchedulesByTopic = async () => {
   ]);
   return byTopic;
 };
+
+exports.getFeedbacksByMentor = async (mentorId) => {
+  // Busca los schedules con feedback o rating, y asesoría del mentor indicado
+  const schedules = await Schedule.find({
+    $or: [
+      { feedback: { $exists: true, $ne: "" } },
+      { rating: { $exists: true, $ne: null } },
+    ]
+  })
+    .populate({
+      path: "studentId",
+      select: "name email"
+    })
+    .populate({
+      path: "AdvisoryId",
+      match: { advisorId: mentorId },
+      select: "advisorId",
+      populate: { path: "advisorId", select: "name email" }
+    })
+    .sort({ updatedAt: -1 });
+
+  // Filtrar los schedules que realmente pertenecen al mentor
+  return schedules.filter(sch => sch.AdvisoryId);
+};
+
+exports.getAllFeedbacks = async () => {
+  // Busca todos los schedules con feedback o rating
+  return Schedule.find({
+    $or: [
+      { feedback: { $exists: true, $ne: "" } },
+      { rating: { $exists: true, $ne: null } },
+    ]
+  })
+    .populate({
+      path: "studentId",
+      select: "name email"
+    })
+    .populate({
+      path: "AdvisoryId",
+      select: "advisorId",
+      populate: { path: "advisorId", select: "name email" }
+    })
+    .sort({ updatedAt: -1 });
+};
 /**
  * Buscar asesorías próximas para un estudiante por su código.
  * @param {string} studentCode
@@ -482,19 +527,20 @@ exports.getUpcomingByStudentCode = async (codigo) => {
   const user = await User.findOne({ codigo });
   if (!user) return [];
 
-  // 2. Busca asesorías futuras y no canceladas para ese estudiante
   const now = new Date();
+  const margin = 80 * 60 * 1000; // 1 hora 20 minutos en ms
 
   return Schedule.find({
     studentId: user._id,
     status: { $ne: "canceled" },
-    dateStart: { $gte: now },
+    // Permite cancelar desde ahora y hasta 1h20min después de inicio
+    dateStart: { $gte: new Date(now.getTime() - margin) },
   })
     .populate({
       path: "AdvisoryId",
       select: "advisorId",
       populate: {
-        path: "advisorId", // <-- esto depende de tu modelo Advisory
+        path: "advisorId",
         select: "name email",
       },
     })
@@ -520,25 +566,25 @@ exports.countSchedulesByAdvisory = async (advisoryId, dateStart) => {
  * @returns {Promise}
  */
 exports.cancelSchedule = async (scheduleId) => {
-  // Cambia el estado a "canceled" y retorna el documento actualizado, populando lo necesario
-  const schedule = await Schedule.findByIdAndUpdate(
-    scheduleId,
-    { status: "canceled" },
-    { new: true }
-  )
-    .populate({
-      path: "studentId",
-      select: "name email",
-    })
-    .populate({
-      path: "AdvisoryId",
-      populate: {
-        path: "advisorId",
-        select: "name email",
-      },
-    });
-
+  const schedule = await Schedule.findById(scheduleId);
   if (!schedule) throw new Error("No encontrada");
+
+  const now = new Date();
+  const margin = 80 * 60 * 1000; // 1 hora 20 minutos en ms
+
+  // Solo permitir cancelar si estamos dentro del rango permitido
+  if (now.getTime() > schedule.dateStart.getTime() + margin) {
+    throw new Error("Ya no es posible cancelar esta asesoría (fuera de tiempo permitido)");
+  }
+
+  // Procede a cancelar...
+  schedule.status = "canceled";
+  await schedule.save();
+
+  await schedule.populate([
+    { path: "studentId", select: "name email" },
+    { path: "AdvisoryId", populate: { path: "advisorId", select: "name email" } },
+  ]);
 
   await EmailService.sendAppointmentCanceled(
     schedule.studentId,
@@ -667,10 +713,10 @@ exports.fetchTotalAdvisories = async () => {
 };
 
 exports.fetchAttendancePercentage = async () => {
-  const total = await Schedule.countDocuments();
+  const total = await Schedule.countDocuments({status: "approved"});
   if (total === 0) return 0;
 
-  const attended = await Schedule.countDocuments({ attendance: true });
+  const attended = await Schedule.countDocuments({ attendance: true, status: "approved" });
   return ((attended / total) * 100).toFixed(1);
 };
 

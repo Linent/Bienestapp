@@ -6,7 +6,13 @@ const userService = require("./userService");
 const User = require("../models/User");
 
 class AdvisoryService {
-  async createAdvisory(advisorId, careerId, dateStart, day, status="pending") {
+  async createAdvisory(
+    advisorId,
+    careerId,
+    dateStart,
+    day,
+    status = "pending"
+  ) {
     try {
       const advisor = await userService.getUserById(advisorId);
       if (!advisor || advisor.role !== "academic_friend") {
@@ -50,7 +56,7 @@ class AdvisoryService {
         dateStart: start,
         dateEnd: end,
         day: day.toLowerCase(),
-        status
+        status,
       });
 
       // Sumar las horas de la asesoría a las horas disponibles del asesor
@@ -67,7 +73,7 @@ class AdvisoryService {
   }
   async getAllAdvisory() {
     try {
-      const advisories = await Advisory.find({status: "approved"})
+      const advisories = await Advisory.find({ status: "approved" })
         .populate({ path: "advisorId", select: "name role" })
         .populate({ path: "careerId", select: "name" });
 
@@ -79,8 +85,8 @@ class AdvisoryService {
   async getAdvisoryById(advisoryId) {
     try {
       const advisory = await User.findById(advisoryId)
-      .select('name career')
-      .populate('career', 'name');
+        .select("name career")
+        .populate("career", "name");
       return advisory;
     } catch (error) {
       throw handlerError("Error al obtener la asesoría: " + error.message);
@@ -369,14 +375,19 @@ class AdvisoryService {
       ); // lunes
       startOfWeek.setHours(0, 0, 0, 0);
 
+      // Busca solo asesorías aprobadas y recurrentes
       const advisories = await Advisory.find({
         status: "approved",
         recurring: true,
-      }).populate({ path: "advisorId", select: "name email codigo" });
+      }).populate({ path: "advisorId", select: "name email codigo role" });
 
-      const resultMap = new Map();
+      // Agrupar asesorías por mentor
+      const advisorMap = new Map();
 
       advisories.forEach((advisory) => {
+        // Verifica que el mentor tenga rol "academic_friend"
+        if (advisory.advisorId.role !== "academic_friend") return;
+
         const dayNumber = this.getDayOfWeekNumber(advisory.day);
 
         const advisoryDate = new Date(startOfWeek);
@@ -394,7 +405,6 @@ class AdvisoryService {
           advisory.dateEnd.getUTCMinutes()
         );
 
-        // Formato HH:mm (24 horas) en zona horaria Colombia
         const startCol = new Intl.DateTimeFormat("es-CO", {
           timeZone: "America/Bogota",
           hour: "2-digit",
@@ -411,21 +421,30 @@ class AdvisoryService {
 
         const advisorId = advisory.advisorId._id.toString();
 
-        if (!resultMap.has(advisorId)) {
-          resultMap.set(advisorId, {
+        if (!advisorMap.has(advisorId)) {
+          advisorMap.set(advisorId, {
             advisorCode: advisorId,
             name: advisory.advisorId.name,
             email: advisory.advisorId.email,
             codigo: advisory.advisorId.codigo,
             horarios: [],
+            role: advisory.advisorId.role,
           });
         }
 
         const horarioTexto = `${advisory.day} de ${startCol} a ${endCol}`;
-        resultMap.get(advisorId).horarios.push(horarioTexto);
+        advisorMap.get(advisorId).horarios.push(horarioTexto);
       });
 
-      return Array.from(resultMap.values());
+      // Solo conservar los mentores con 10 asesorías asignadas
+      const filtered = Array.from(advisorMap.values()).filter(
+        (a) => a.horarios.length === 10
+      );
+
+      // Puedes ordenar por nombre o código si deseas
+      filtered.sort((a, b) => a.codigo.localeCompare(b.codigo));
+
+      return filtered;
     } catch (error) {
       console.error(error);
       throw new Error("Error al agrupar asesorías semanales: " + error.message);

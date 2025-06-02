@@ -44,11 +44,12 @@ exports.getCareerById = async (req, res) => {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
 
-    const { Id } = req.params;
-    if (!careerId) {
+    const { id } = req.params;
+    console.log(id);
+    if (!id) {
       return handlerError(res, 400, errorsConstants.inputIdRequired);
     }
-    const result = await careerService.getCareerById(Id);
+    const result = await careerService.getCareerById(id);
     return res.status(result.status).send(result);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
@@ -62,13 +63,14 @@ exports.updateCareer = async (req, res) => {
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
 
-    const { Id } = req.params;
+    const { id } = req.params;
     const body = req.body;
-    if (!body || !careerId) {
+    console.log(id,body)
+    if (!body || !id) {  // << aquí
       return handlerError(res, 400, errorsConstants.inputRequired);
     }
-    const result = await careerService.updateCareer(Id, body);
-    return res.status(result.status).send(result);
+    const result = await careerService.updateCareer(id, body);
+    return res.status(result.status).send(result);  // status y mensaje controlados
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
@@ -77,14 +79,13 @@ exports.updateCareer = async (req, res) => {
 exports.enableCareer = async (req, res) => {
   try {
     const usersValid = ["academic_friend", "admin"];
-
     if (!usersValid.includes(req.user.role)){
       return handlerError(res, 403, errorsConstants.unauthorized);
     }
     const { enable } = req.body;
-    const { Id } = req.params;
-    const result = await careerService.enableCareer(Id, enable);
-    return res.status(result.status).send(result);
+    const { id } = req.params;
+    const result = await careerService.enableCareer(id, enable);
+    return res.status(200).send(result);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }

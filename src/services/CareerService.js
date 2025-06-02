@@ -27,17 +27,18 @@ exports.getAllCareers = async () => {
   }
 };
 
- exports.getCareerById = async (id) => {
+exports.getCareerById = async (id) => {
   try {
     const career = await Career.findById(id);
     if (!career) {
       return { success: false, status: 404, message: "Carrera no encontrada" };
     }
-    return  career;
+    // SIEMPRE retorna { success, status, data }
+    return { success: true, status: 200, data: career };
   } catch (error) {
     return { success: false, status: 500, message: "Error al obtener la carrera" };
   }
-}
+};
 
  exports.updateCareer = async (id, data) => {
   try {
@@ -62,8 +63,7 @@ exports.enableCareer = async (id, enable) => {
       return { success: false, status: 404, message: "Carrera no encontrada" };
     }
     return {
-      success: true,
-      data: career,
+      success: true
     };
   } catch (error) {
     return {
@@ -76,4 +76,7 @@ exports.enableCareer = async (id, enable) => {
 exports.findByCode = async (code) => {
   const career = await Career.findOne({ code });
   return career;
+};
+exports.findByCodes = async (codes) => {
+  return Career.find({ code: { $in: codes } });
 };

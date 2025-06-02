@@ -1,125 +1,75 @@
-const axios = require ("axios");
-const config = require ("../config/config");
-const { fi } = require ("date-fns/locale");
+const axios = require("axios");
+const config = require("../config/config");
 
-const API_TOKEN = config.API_TOKEN;
-const API_VERSION = config.API_VERSION;
-const BUSNESS_PHONE = config.BUSINESS_PHONE;
-const url = `https://graph.facebook.com/${API_VERSION}/${BUSNESS_PHONE}/messages`;
-const headers = {
-  Authorization: `Bearer ${API_TOKEN}`,
-  "Content-Type": "application/json",
-};
+const { API_TOKEN, API_VERSION, BUSINESS_PHONE } = config;
+
+const apiClient = axios.create({
+  baseURL: `https://graph.facebook.com/${API_VERSION}/${BUSINESS_PHONE}`,
+  headers: {
+    Authorization: `Bearer ${API_TOKEN}`,
+    "Content-Type": "application/json",
+  },
+});
+
 class WhatsAppService {
-  async sendMessage(to, body, messageId) {
-    try {
-      console.log(body);
-      const response = await axios({
-        method: "POST",
-        url,
-        headers,
-        data: {
-          messaging_product: "whatsapp",
-          to,
-          text: { body },
-        },
-      });
-
-      return response;
-    } catch (error) {
-      console.error(
-        "Error sending message:",
-        error.response?.data || error.message
-      );
-    }
+  async sendMessage(to, body) {
+    return this._post("/messages", {
+      messaging_product: "whatsapp",
+      to,
+      text: { body },
+    });
   }
 
   async markAsRead(messageId) {
-    try {
-      await axios({
-        method: "POST",
-        url,
-        headers,
-        data: {
-          messaging_product: "whatsapp",
-          status: "read",
-          message_id: messageId,
-        },
-      });
-    } catch (error) {
-      console.error(
-        "Error sending message:",
-        error.response?.data || error.message
-      );
-    }
+    return this._post("/messages", {
+      messaging_product: "whatsapp",
+      status: "read",
+      message_id: messageId,
+    });
   }
 
-  async sendInteractiveButtons(to, BodyText, buttons) {
-    try {
-      //console.log(to, BodyText, buttons);
-      const response = await axios({
-        method: "POST",
-        url,
-        headers,
-        data: {
-          messaging_product: "whatsapp",
-          to,
-          type: "interactive",
-          interactive: {
-            type: "button",
-            body: { text: BodyText },
-            action: {
-              buttons,
-            },
-          },
-        },
-      });
-
-      return response;
-    } catch (error) {
-      console.error(
-        "Error sending message:",
-        error.response?.data || error.message
-      );
-    }
+  async sendInteractiveButtons(to, bodyText, buttons) {
+    return this._post("/messages", {
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: bodyText },
+        action: { buttons },
+      },
+    });
   }
 
   async sendMediaMessage(to, type, mediaUrl, caption) {
+    const mediaPayload = {
+      messaging_product: "whatsapp",
+      to,
+      type,
+      [type]: { link: mediaUrl },
+    };
+
+    if (type === "document") {
+      mediaPayload.document.caption = caption;
+      mediaPayload.document.filename = "document.pdf";
+    }
+
+    return this._post("/messages", mediaPayload);
+  }
+
+  // Método privado para evitar repetición
+  async _post(endpoint, data) {
     try {
-      const mediaObject = {};
-      switch (type) {
-        case "image":
-          mediaObject.image = { link: mediaUrl };
-          break;
-        case "audio":
-          mediaObject.audio = { link: mediaUrl };
-          break;
-        case "video":
-          mediaObject.video = { link: mediaUrl };
-          break;
-        case "document":
-          mediaObject.document = { link: mediaUrl, caption, filename: ".pdf" };
-          break;
-        default:
-          throw new Error("Unsupported media type");
-      }
-      await axios({
-        method: "POST",
-        url,
-        headers,
-        data: {
-          messaging_product: "whatsapp",
-          to,
-          type: type,
-          ...mediaObject,
-        },
-      });
+      const response = await apiClient.post(endpoint, data);
+      return response.data;
     } catch (error) {
       console.error(
-        "Error sending Media:",
+        "WhatsApp API Error:",
         error.response?.data || error.message
       );
+      throw error;
     }
   }
 }
+
 module.exports = new WhatsAppService();
