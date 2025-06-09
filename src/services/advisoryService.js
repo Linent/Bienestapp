@@ -379,7 +379,7 @@ class AdvisoryService {
       const advisories = await Advisory.find({
         status: "approved",
         recurring: true,
-      }).populate({ path: "advisorId", select: "name email codigo role" });
+      }).populate({ path: "advisorId careerId", select: "name email codigo role" });
 
       // Agrupar asesorías por mentor
       const advisorMap = new Map();
@@ -428,6 +428,7 @@ class AdvisoryService {
             email: advisory.advisorId.email,
             codigo: advisory.advisorId.codigo,
             horarios: [],
+            carrera: advisory.careerId.name,
             role: advisory.advisorId.role,
           });
         }

@@ -9,7 +9,7 @@ const XLSX = require("xlsx");
 // Registro de usuario
 const register = async (req, res) => {
   try {
-    const { name, email, password, role, career, codigo } = req.body;
+    const { name, email, password, role, career, codigo, dni } = req.body;
     if (!name || !email || !password || !role || !codigo) {
       return handlerError(res, 400, errorsConstants.inputRequired);
     }
@@ -20,7 +20,8 @@ const register = async (req, res) => {
       password,
       role,
       career,
-      codigo
+      codigo,
+      dni
     );
 
     if (!userCreated || typeof userCreated === "string") {

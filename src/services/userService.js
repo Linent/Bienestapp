@@ -6,10 +6,10 @@ const EmailService = require("../config/emailConfig");
 const { errorsConstants } = require("../constants/errors.constant");
 const Career = require("../models/Career");
 
-exports.registerUser = async (name, email, password, role, career, codigo) => {
+exports.registerUser = async (name, email, password, role, career, codigo, dni) => {
   try {
     const existingUser = await User.findOne({
-      $or: [{ email }, { codigo }],
+      $or: [{ email }, { codigo }, { dni }],
     });
     
     if (existingUser) {
@@ -23,10 +23,10 @@ exports.registerUser = async (name, email, password, role, career, codigo) => {
       role,
       career,
       codigo,
+      dni
     });
     const createUser = await newUser.save();
     if(newUser.role !=='studendt'){
-
       const userId = String(createUser._id);
       await exports.sendWelcomeEmail(userId);
     }
@@ -62,7 +62,7 @@ exports.bulkRegisterUsers = async (rows) => {
   let errors = [];
 
   for (const row of rows) {
-    const { Nombre, Correo, Código } = row;
+    const { Nombre, Correo, Código,dni } = row;
 
     if (!Nombre || !Correo || !Código) {
       skipped++;
@@ -87,7 +87,8 @@ exports.bulkRegisterUsers = async (rows) => {
         codigo,
         "academic_friend",
         career._id,
-        codigo
+        codigo,
+        dni
       );
 
       if (typeof result !== "string") {

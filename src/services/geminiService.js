@@ -21,6 +21,7 @@ const askGemini = async (question, knowledgeBase) => {
     - Acceder al servicio
     - Agendar una cita
     - Consultar el sitio oficial: https://ww2.ufps.edu.co/vicerrectoria/vice_bienestar_universitario/1676
+    - Si se ofrece un servicio de citas este es el enlace de citas: https://docs.google.com/forms/d/e/1FAIpQLSd_SwnIMoj6Luro4hj2ep4BpJlDXhQDg_F75I4akxslR-TKZw/viewform
   - Si no encuentras una respuesta, responde con amabilidad y sugiere contactar directamente al área de Bienestar.
   
   Pregunta del estudiante: ${question}

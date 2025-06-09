@@ -12,7 +12,6 @@ const BENEFICIARY_TYPES = [
   "Egresado(a) UFPS",
   "Docente UFPS",
   "Personal Administrativo UFPS",
-  "Externo(a) a la UFPS"
 ];
 const SERVICES_LIST = [
   "Servicio Médico",
