@@ -455,6 +455,7 @@ class AdvisoryService {
   async findOneByAdvisorAndDay(advisorCode, selectedDay, selectedHour) {
     // Buscar al asesor por su código
     const advisor = await userService.findByAdvisorCode(advisorCode);
+    console.log(advisor);
     if (!advisor) return null;
     // Buscar asesorías del asesor ese día
     const advisories = await Advisory.find({
