@@ -465,7 +465,7 @@ class AdvisoryService {
       advisorId: advisor._id,
       day: selectedDay.toLowerCase(), // en minúsculas para coincidir con 'miércoles', etc.
     });
-
+    console.log(advisories);
     // Filtrar por hora exacta
     const advisory = advisories.find((a) => {
       const hora = moment(a.dateStart).tz("America/Bogota").format("HH:mm");
