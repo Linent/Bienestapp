@@ -575,7 +575,9 @@ async handleAppointmentFlow(to, message) {
 
         if (student) {
           // Agenda directamente, NO pidas más datos
-          console.log('llega aquí');
+          console.log(state.advisor.advisorCode,
+            state.selectedDay,
+            state.selectedHour);
           const advisory = await advisoryService.findOneByAdvisorAndDay(
             state.advisor.advisorCode,
             state.selectedDay,
