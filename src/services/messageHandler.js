@@ -575,15 +575,13 @@ async handleAppointmentFlow(to, message) {
 
         if (student) {
           // Agenda directamente, NO pidas más datos
-          console.log(state.advisor.advisorCode,
-            state.selectedDay,
-            state.selectedHour);
+
           const advisory = await advisoryService.findOneByAdvisorAndDay(
             state.advisor.advisorCode,
             state.selectedDay,
             state.selectedHour
           );
-          console.log(advisory);
+
           if (!advisory) {
             responseMessage =
               "⚠️ No se encontró una asesoría activa ese día. El flujo ha sido reiniciado. Intenta otro.";

@@ -240,7 +240,7 @@ exports.getKpiStats = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Error al obtener los KPIs" });
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 

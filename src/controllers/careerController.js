@@ -45,7 +45,6 @@ exports.getCareerById = async (req, res) => {
     }
 
     const { id } = req.params;
-    console.log(id);
     if (!id) {
       return handlerError(res, 400, errorsConstants.inputIdRequired);
     }
@@ -65,7 +64,7 @@ exports.updateCareer = async (req, res) => {
 
     const { id } = req.params;
     const body = req.body;
-    console.log(id,body)
+
     if (!body || !id) {  // << aquí
       return handlerError(res, 400, errorsConstants.inputRequired);
     }

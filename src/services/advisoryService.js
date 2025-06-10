@@ -458,20 +458,17 @@ class AdvisoryService {
   async findOneByAdvisorAndDay(advisorCode, selectedDay, selectedHour) {
     // Buscar al asesor por su código
     const advisor = await userService.findByAdvisorCode(advisorCode);
-    console.log(advisor);
     if (!advisor) return null;
     // Buscar asesorías del asesor ese día
     const advisories = await Advisory.find({
       advisorId: advisor._id,
       day: selectedDay.toLowerCase(), // en minúsculas para coincidir con 'miércoles', etc.
     });
-    console.log(advisories);
     // Filtrar por hora exacta
     const advisory = advisories.find((a) => {
       const hora = moment(a.dateStart).tz("America/Bogota").format("HH:mm");
       return hora === selectedHour;
     });
-    console.log(advisory);
     return advisory || null;
   }
 }
