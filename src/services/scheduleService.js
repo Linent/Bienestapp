@@ -121,8 +121,6 @@ exports.createSchedule = async (studentId, topic, advisoryId) => {
   }
 };
 
-// Ayuda: función para obtener la próxima fecha con ese día de la semana
-
 exports.getSchedules = async () => {
   try {
     const schedules = await Schedule.find()
