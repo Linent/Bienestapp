@@ -1,7 +1,7 @@
 const Advisory = require("../models/Advisory");
 const { handlerError } = require("../handlers/errors.handlers");
 const { errorsConstants } = require("../constants/errors.constant");
-const moment = require("moment");
+const moment = require("moment-timezone");
 const userService = require("./userService");
 const User = require("../models/User");
 
