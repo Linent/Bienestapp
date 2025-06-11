@@ -6,7 +6,8 @@ const { feedbackSurveyTemplate } = require("../emails/feedbackSurveyTemplate");
 const moment = require("moment-timezone");
 
 exports.sendAppointmentConfirmation = async (student, advisor, schedule, topic) => {
-  const subject = "Confirmación de Asesoría Académica";
+  const subject = `Confirmación de Asesoría Académica con ${advisor?.name}`;
+  
   const formattedDate = moment(schedule.dateStart)
   .tz("America/Bogota")
   .format("DD/MM/YYYY, h:mm a");
@@ -24,7 +25,7 @@ exports.sendAppointmentConfirmation = async (student, advisor, schedule, topic) 
 };
 
 exports.sendAppointmentCanceled = async (student, advisor, schedule) => {
-  const subject = "Cancelación de Asesoría Académica";
+  const subject = `Cancelación de Asesoría Académica con ${advisor?.name}`;
   const formattedDate = moment(schedule.dateStart)
   .tz("America/Bogota")
   .format("DD/MM/YYYY, h:mm a");
