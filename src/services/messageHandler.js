@@ -703,9 +703,7 @@ class MessageHandler {
           state.studentCode = code;
 
           // Busca asesorías próximas y no canceladas
-          const schedules = await scheduleService.getUpcomingByStudentCode(
-            code
-          );
+          const schedules = await scheduleService.getUpcomingByStudentCode(code);
 
           if (!schedules.length) {
             responseMessage = "😕 No tienes asesorías próximas para reagendar.";
@@ -723,11 +721,9 @@ class MessageHandler {
                   s.AdvisoryId && s.AdvisoryId.advisorId
                     ? s.AdvisoryId.advisorId.name
                     : "No disponible";
-                return `${i + 1}. Día: *${s.dateStart
-                  .toLocaleString()
-                  .slice(0, 16)}* - Asesor: *${advisorName}* - Tema: ${
-                  s.topic
-                }`;
+                return `${i + 1}. Día: *${moment(s.dateStart)
+                  .tz("America/Bogota")
+                  .format("D/M/YYYY, h:mm a")}* - Asesor: *${advisorName}* - Tema: ${s.topic}`;
               })
               .join("\n") +
             "\n\n✍️ Escribe el número de la asesoría que quieres reagendar.";
@@ -757,11 +753,9 @@ class MessageHandler {
               : "No disponible";
           responseMessage =
             `¿Quieres reagendar esta asesoría?\n` +
-            `Día: *${selected.dateStart
-              .toLocaleString()
-              .slice(0, 16)}* - Asesor: *${advisorName}* - Tema: ${
-              selected.topic
-            }\n\n` +
+            `Día: *${moment(selected.dateStart)
+              .tz("America/Bogota")
+              .format("D/M/YYYY, h:mm a")}* - Asesor: *${advisorName}* - Tema: ${selected.topic}\n\n` +
             "Responde 'sí' para continuar o 'no' para cancelar.";
           break;
         }
@@ -804,7 +798,7 @@ class MessageHandler {
       );
       delete this.rescheduleState[to];
     }
-  }
+}
   async handleCancelFlow(to, message) {
     const state = this.cancelState[to] || { step: "askCode" };
     let responseMessage = "";
