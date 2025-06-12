@@ -9,7 +9,7 @@ const Career = require("../models/Career");
 exports.registerUser = async (name, email, password, role, career, codigo, dni) => {
   try {
     const existingUser = await User.findOne({
-      $or: [{ email }, { codigo }, { dni }],
+      $or: [{ email }, { codigo }, { dni }, { delete: false}],
     });
     
     if (existingUser) {
