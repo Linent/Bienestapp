@@ -10,6 +10,9 @@ const JwtService = require("./jwt");
 const jwtService = new JwtService();
 const jwt = require("jsonwebtoken");
 const { SECRET_KEY } = require("../config/config");
+const moment = require('moment-timezone');
+
+
 exports.createSchedule = async (studentId, topic, advisoryId) => {
   try {
     const advisory = await Advisory.findById(advisoryId);
@@ -22,16 +25,20 @@ exports.createSchedule = async (studentId, topic, advisoryId) => {
 
     // Calcular fecha y hora de HOY de la asesoría
     const now = DateTime.now().setZone("America/Bogota");
-    const sessionStart = DateTime.fromJSDate(advisory.dateStart).setZone("America/Bogota").set({
-      year: now.year,
-      month: now.month,
-      day: now.day,
-    });
-    const sessionEnd = DateTime.fromJSDate(advisory.dateEnd).setZone("America/Bogota").set({
-      year: now.year,
-      month: now.month,
-      day: now.day,
-    });
+    const sessionStart = DateTime.fromJSDate(advisory.dateStart)
+      .setZone("America/Bogota")
+      .set({
+        year: now.year,
+        month: now.month,
+        day: now.day,
+      });
+    const sessionEnd = DateTime.fromJSDate(advisory.dateEnd)
+      .setZone("America/Bogota")
+      .set({
+        year: now.year,
+        month: now.month,
+        day: now.day,
+      });
     const maxAgendaTime = sessionEnd.minus({ minutes: 40 });
 
     let nextDate;
@@ -62,7 +69,7 @@ exports.createSchedule = async (studentId, topic, advisoryId) => {
       }
     } else {
       // No es el día: calcula el próximo día correcto
-      let temp = now.startOf('day');
+      let temp = now.startOf("day");
       while (temp.weekday !== targetWeekday || temp < now) {
         temp = temp.plus({ days: 1 });
       }
@@ -102,7 +109,7 @@ exports.createSchedule = async (studentId, topic, advisoryId) => {
     const populatedSchedule = await Schedule.findById(newSchedule._id)
       .populate({
         path: "AdvisoryId",
-        populate: { path: "advisorId", select: "name email" }
+        populate: { path: "advisorId", select: "name email" },
       })
       .populate({ path: "studentId", select: "name email" });
 
@@ -140,7 +147,10 @@ exports.getSchedules = async () => {
 };
 
 exports.getStudentsByAdvisorAndDate = async (advisoryId, day, dateStart) => {
-  const advisorySchedules = await Schedule.find({ AdvisoryId: advisoryId, status:"approved" })
+  const advisorySchedules = await Schedule.find({
+    AdvisoryId: advisoryId,
+    status: "approved",
+  })
     .populate({
       path: "AdvisoryId",
       select: "dateStart advisorId day",
@@ -209,16 +219,16 @@ exports.deleteSchedule = async (scheduleId) => {
 
 exports.updateAttendance = async (scheduleId, attendanceStatus) => {
   const schedule = await Schedule.findByIdAndUpdate(
-  scheduleId,
-  { attendance: attendanceStatus, status:"completed" },
-  { new: true }
-).populate([
-  { path: "studentId", select: "name email" },
-  { 
-    path: "AdvisoryId", 
-    populate: { path: "advisorId", select: "name" } 
-  }
-]);
+    scheduleId,
+    { attendance: attendanceStatus, status: "completed" },
+    { new: true }
+  ).populate([
+    { path: "studentId", select: "name email" },
+    {
+      path: "AdvisoryId",
+      populate: { path: "advisorId", select: "name" },
+    },
+  ]);
 
   if (!schedule) throw new Error("No se encontró el schedule");
 
@@ -236,13 +246,11 @@ exports.updateAttendance = async (scheduleId, attendanceStatus) => {
 exports.validateFeedbackToken = async (token) => {
   try {
     const payload = jwt.verify(token, SECRET_KEY);
-    const schedule = await Schedule.findById(payload.scheduleId)
-      .populate([
-        { path: "studentId", select: "name" },
-        { path: "AdvisoryId", populate: { path: "advisorId", select: "name" } },
-      ]);
+    const schedule = await Schedule.findById(payload.scheduleId).populate([
+      { path: "studentId", select: "name" },
+      { path: "AdvisoryId", populate: { path: "advisorId", select: "name" } },
+    ]);
 
-      
     if (!schedule) return null; // <-- ya NO usa res, solo retorna null
     // Retorna el objeto con los datos
     return {
@@ -478,22 +486,22 @@ exports.getFeedbacksByMentor = async (mentorId) => {
     $or: [
       { feedback: { $exists: true, $ne: "" } },
       { rating: { $exists: true, $ne: null } },
-    ]
+    ],
   })
     .populate({
       path: "studentId",
-      select: "name email"
+      select: "name email",
     })
     .populate({
       path: "AdvisoryId",
       match: { advisorId: mentorId },
       select: "advisorId",
-      populate: { path: "advisorId", select: "name email" }
+      populate: { path: "advisorId", select: "name email" },
     })
     .sort({ updatedAt: -1 });
 
   // Filtrar los schedules que realmente pertenecen al mentor
-  return schedules.filter(sch => sch.AdvisoryId);
+  return schedules.filter((sch) => sch.AdvisoryId);
 };
 
 exports.getAllFeedbacks = async () => {
@@ -502,16 +510,16 @@ exports.getAllFeedbacks = async () => {
     $or: [
       { feedback: { $exists: true, $ne: "" } },
       { rating: { $exists: true, $ne: null } },
-    ]
+    ],
   })
     .populate({
       path: "studentId",
-      select: "name email"
+      select: "name email",
     })
     .populate({
       path: "AdvisoryId",
       select: "advisorId",
-      populate: { path: "advisorId", select: "name email" }
+      populate: { path: "advisorId", select: "name email" },
     })
     .sort({ updatedAt: -1 });
 };
@@ -551,11 +559,23 @@ exports.getUpcomingByStudentCode = async (codigo) => {
  * @returns {Promise<number>}
  */
 exports.countSchedulesByAdvisory = async (advisoryId, dateStart) => {
-  const filter = { AdvisoryId: advisoryId, status: { $ne: "canceled" } };
-  if (dateStart) {
-    filter.dateStart = new Date(dateStart);
+  try {
+    if (!advisoryId || advisoryId.length !== 24) {
+      throw new Error("advisoryId inválido");
+    }
+    const filter = { AdvisoryId: advisoryId, status: { $ne: "canceled" } };
+
+    if (dateStart) {
+      const start = moment.utc(dateStart).startOf("minute").toDate();
+      const end = moment.utc(start).add(2, "hours").toDate();
+      filter.dateStart = { $gte: start, $lt: end };
+    }
+    const count = await Schedule.countDocuments(filter);
+    return count;
+  } catch (error) {
+    console.error("Error en countSchedulesByAdvisory:", error);
+    throw error;
   }
-  return Schedule.countDocuments(filter);
 };
 
 /**
@@ -572,7 +592,9 @@ exports.cancelSchedule = async (scheduleId) => {
 
   // Solo permitir cancelar si estamos dentro del rango permitido
   if (now.getTime() > schedule.dateStart.getTime() + margin) {
-    throw new Error("Ya no es posible cancelar esta asesoría (fuera de tiempo permitido)");
+    throw new Error(
+      "Ya no es posible cancelar esta asesoría (fuera de tiempo permitido)"
+    );
   }
 
   // Procede a cancelar...
@@ -581,7 +603,10 @@ exports.cancelSchedule = async (scheduleId) => {
 
   await schedule.populate([
     { path: "studentId", select: "name email" },
-    { path: "AdvisoryId", populate: { path: "advisorId", select: "name email" } },
+    {
+      path: "AdvisoryId",
+      populate: { path: "advisorId", select: "name email" },
+    },
   ]);
 
   await EmailService.sendAppointmentCanceled(
@@ -711,10 +736,13 @@ exports.fetchTotalAdvisories = async () => {
 };
 
 exports.fetchAttendancePercentage = async () => {
-  const total = await Schedule.countDocuments({status: "approved"});
+  const total = await Schedule.countDocuments({ status: "approved" });
   if (total === 0) return 0;
 
-  const attended = await Schedule.countDocuments({ attendance: true, status: "approved" });
+  const attended = await Schedule.countDocuments({
+    attendance: true,
+    status: "approved",
+  });
   return ((attended / total) * 100).toFixed(1);
 };
 

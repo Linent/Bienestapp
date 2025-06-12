@@ -46,12 +46,12 @@ exports.countSchedulesByAdvisory = async (req, res) => {
   try {
     const { advisoryId, dateStart } = req.query;
     if (!advisoryId) {
-      return res.status(400).json({ error: "advisoryId requerido" });
+      return res.status(400).send({ error: "advisoryId requerido" });
     }
     const count = await ScheduleService.countSchedulesByAdvisory(advisoryId, dateStart);
-    return res.json({ count });
+    return res.status(200).send({ count });
   } catch (err) {
-    return res.status(500).json({ error: "Error al contar agendas" });
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 exports.getStudentsByAdvisory = async (req, res) => {
@@ -265,9 +265,9 @@ exports.getUpcomingByStudentCode = async (req, res) => {
   try {
     const { studentCode } = req.params;
     const schedules = await ScheduleService.getUpcomingByStudentCode(studentCode);
-    res.json(schedules);
+    res.status(200).send(schedules);
   } catch (err) {
-    res.status(500).json({ message: "Error al buscar asesorías." });
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 
@@ -279,9 +279,9 @@ exports.cancelSchedule = async (req, res) => {
   try {
     const { scheduleId } = req.params;
     await ScheduleService.cancelSchedule(scheduleId);
-    res.json({ message: "Asesoría cancelada correctamente." });
+    res.status(200).send({ message: "Asesoría cancelada correctamente." });
   } catch (err) {
-    res.status(404).json({ message: err.message || "Error al cancelar." });
+    return handlerError(res, 500, errorsConstants.serverError);
   }
 };
 // Obtener promedio de asistencia por asesoría

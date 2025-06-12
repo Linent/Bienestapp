@@ -6,13 +6,13 @@ const UploadFile = require('../helpers/uploadFile');
 exports.uploadFile = async (req, res) => {
   try {
     if (!req.files || !req.files.file) {
-      return res.status(400).json({ message: "Archivo no encontrado" });
+      return res.status(400).send({ message: "Archivo no encontrado" });
     }
 
     const uploader = new UploadFile(req.files.file, "topics", ["pdf", "jpg", "png", "jpeg"], "user123");
     const result = await uploader.uploadToCloudinary();
 
-    return res.status(200).json({
+    return res.status(200).send({
       message: "Subida exitosa",
       url: result.secure_url,
       public_id: result.public_id,

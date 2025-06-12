@@ -245,7 +245,7 @@ const updateUser = async (req, res) => {
     if (!updatedUser)
       return handlerError(res, 404, errorsConstants.userNotFound);
 
-    res.status(200).json(updatedUser);
+    res.status(200).send(updatedUser);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }

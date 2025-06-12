@@ -13,7 +13,7 @@ exports.getAllQueries = async (req, res) => {
       .populate("userId", "fullName documentType documentNumber beneficiaryType academicProgram ufpsCode") // si quieres info de usuario
       .populate("topicId", "name")
       .sort({ createdAt: -1 });
-    res.json(queries);
+    res.status(200).send(queries);
   } catch (error) {
     return handlerError(res, 500, errorsConstants.serverError);
   }
@@ -231,7 +231,7 @@ exports.getKpiStats = async (req, res) => {
       }
     ]);
 
-    res.json({
+    res.status(200).send({
       totalQueries,
       totalUniqueUsers,
       last7days,
